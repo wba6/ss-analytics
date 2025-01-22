@@ -1,0 +1,3 @@
+[submodule "vendor/performance-analyzer"]
+	path = vendor/performance-analyzer
+	url = git@github.com:wba6/performance-analyzer.git
