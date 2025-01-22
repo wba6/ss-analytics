@@ -2,11 +2,14 @@
 #include "vendor/performance-analyzer/Profiler.h"
 
 int stringSearch(const std::string &str, const std::string &subStr);
+void function();
 int main() {
 
     // Start the profiler
     Profiler::Get().BeginSession("Main", "profiler-results.json");
+
     stringSearch("Hello, World!", "World");
+    function();
 
     // end the profiler
     Profiler::Get().EndSession();
@@ -31,4 +34,13 @@ int stringSearch(const std::string &str, const std::string &subStr) {
         }
     }
     return -1;
+}
+
+void function() {
+    PROFILE_FUNCTION();
+    for (int i = 0; i < 2000000000; ++i) {
+        if(i%2 == 0) {
+            i += i%2;
+        }
+    }
 }
