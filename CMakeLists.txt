@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(ss_analytics)
+project(ss_analytics LANGUAGES CXX ASM_NASM)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -10,5 +10,5 @@ add_compile_definitions(PROFILING_ENABLED)
 add_subdirectory(./vendor/performance-analyzer)
 
 
-add_executable(ss_analytics main.cpp)
+add_executable(ss_analytics main.cpp containsASM.asm)
 target_link_libraries(ss_analytics PRIVATE performance_analyzer)
