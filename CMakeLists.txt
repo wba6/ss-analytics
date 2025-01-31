@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 option(BUILD_AS_LIBRARY "Build performance_analyzer as a static library" ON)
 add_compile_definitions(PROFILING_ENABLED)
 
+include_directories(./vendor)
 add_subdirectory(./vendor/performance-analyzer)
 
 
