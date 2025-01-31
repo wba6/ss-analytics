@@ -1,10 +1,3 @@
-; -----------------------------------------
-; File: contains_linux64.asm
-; A function 'contains(const char* s1, const char* s2)'
-; that returns 1 if s1 contains s2, otherwise 0.
-; System V AMD64 ABI (Linux 64-bit)
-; -----------------------------------------
-
 global containsASM
 
 section .text
