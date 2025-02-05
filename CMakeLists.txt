@@ -12,6 +12,7 @@ add_subdirectory(./vendor/performance-analyzer)
 
 
 add_executable(ss_analytics main.cpp containsASM.asm cl.cpp implimentedFunctions.cpp standardFunctions.cpp)
+
 find_package(OpenCL REQUIRED)
 target_compile_features(ss_analytics PRIVATE cxx_auto_type)
 target_link_libraries(ss_analytics PRIVATE performance_analyzer OpenCL::OpenCL)
