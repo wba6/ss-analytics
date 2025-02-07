@@ -25,5 +25,5 @@ int standardFind(const std::string &str, const std::string &subStr) {
  */
  int standardContains(const std::string &str, const std::string &subStr) {
     PROFILE_FUNCTION();
-    return str.find(subStr) != std::string::npos;
+    return str.contains(subStr); ;
  }

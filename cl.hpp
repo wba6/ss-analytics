@@ -1,2 +1,2 @@
 #include <string>
-int clSearch(std::string& str);
+int clSearch(const std::string& str, const std::string& substr);
