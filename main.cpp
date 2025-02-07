@@ -1,3 +1,4 @@
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include "cl.hpp"
@@ -10,9 +11,9 @@ std::string loadFile(std::string filename);
 int main() {
 
     std::string str = loadFile("example.txt");
-    std::string toFind = "hello";
+    std::string toFind = "in";
     int location{0}, location2{0}, found{0}, found2{0};
-
+    std::cout << "String: " << str << std::endl;
     // Start the profiler
     Profiler::Get().BeginSession("Main", "profiler-results.json");
 
@@ -22,6 +23,7 @@ int main() {
         PROFILE_SCOPE("ASM Search");
         found = containsASM(str.c_str(), toFind.c_str());
     }
+    found2 = standardFind(str, toFind);
 
     // end the profiler
     Profiler::Get().EndSession();
@@ -34,10 +36,7 @@ int main() {
 
 std::string loadFile(std::string filename){
     std::ifstream t(filename);
-    t.seekg(0, std::ios::end);
-    size_t size = t.tellg();
-    std::string buffer(size, ' ');
-    t.seekg(0);
-    t.read(&buffer[0], size);
-    return std::move(buffer);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    return (buffer.str());
 }
