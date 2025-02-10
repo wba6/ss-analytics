@@ -32,4 +32,4 @@ def generate_random_file(filename, size_mb):
 
 if __name__ == '__main__':
     # Generate a 500 MB file named '500MB_random.txt'
-    generate_random_file('500MB_random.txt', 200)
+    generate_random_file('500MB_random.txt', 300)
