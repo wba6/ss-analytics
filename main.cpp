@@ -11,7 +11,7 @@ std::string loadFile(std::string filename);
 int main() {
 
     std::string str = loadFile("500MB_random.txt");
-    std::string toFind = "XE!G6xLEDnLqc&>f.X";
+    std::string toFind = "^|YMa+?SL{_V*9-G#L";
     int location{0}, location2{0},location3{0}, found{0}, found2{0};
     // Start the profiler
     Profiler::Get().BeginSession("Main", "profiler-results.json");
