@@ -102,9 +102,7 @@ int clSearch(const std::string& str, const std::string& substr) {
         );
     }
 
-    // ------------------------------------------------------------------------
-    // 7. Read back the result
-    // ------------------------------------------------------------------------
+    // Read back the result
     Timer* readTimer = new Timer("Read Result");
     cl::copy(queue, d_result, &hostResult, &hostResult + 1);
     delete readTimer;

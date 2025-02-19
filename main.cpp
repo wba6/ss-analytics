@@ -10,7 +10,7 @@
 #include "implimentedFunctions.hpp"
 #include "performance-analyzer/Profiler.h"
 
-int stringSearchASM(const char* s1, const char* s2);
+int stringSearchAVX(const char* s1, const char* s2);
 std::string loadFile(std::string filename);
 int main() {
 
@@ -25,7 +25,7 @@ int main() {
     location3 = clSearch(str, toFind);
     {
         PROFILE_SCOPE("ASM Search");
-        found = stringSearchASM(str.c_str(), toFind.c_str());
+        found = stringSearchAVX(str.c_str(), toFind.c_str());
     }
     found2 = standardContains(str, toFind);
 
@@ -46,7 +46,7 @@ std::string loadFile(std::string filename){
     return (buffer.str());
 }
 
-int stringSearchASM(const char* haystack, const char* needle) {
+int stringSearchAVX(const char* haystack, const char* needle) {
     // Special case: empty needle matches at beginning.
     if (!needle[0])
         return 0;
