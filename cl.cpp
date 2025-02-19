@@ -1,5 +1,4 @@
-#include "vendor/performance-analyzer/Profiler.h"
-#include "vendor/performance-analyzer/Timer.h"
+#include "performance-analyzer/Timer.h"
 #include <ctime>
 #include <iostream>
 #define CL_HPP_TARGET_OPENCL_VERSION 300
@@ -11,22 +10,17 @@
 //This function can throw exceptions
 int clSearch(const std::string& str, const std::string& substr) {
     PROFILE_FUNCTION();
-    // We'll store -1 if no match is found
     int hostResult = -1;
 
     Timer* setupTimer = new Timer("Setup Context and Queue");
-    // 1. Create context (first available device)
+    // Create context (first available device)
     cl::Context context(CL_DEVICE_TYPE_DEFAULT);
 
-    // 2. Create a command queue
+    // Create a command queue
     cl::CommandQueue queue(context);
     delete setupTimer;
 
-
-    // ------------------------------------------------------------------------
-    // 3. Define the kernel source (naive parallel matching)
-    //    Each work-item checks if 'substr' occurs at position `i` of 'str'.
-    // ------------------------------------------------------------------------
+    //Each work-item checks if 'substr' occurs at position `i` of 'str'.
     std::string kernelSource = R"(
     __kernel void searchNaive(
         __global const char* text,
@@ -56,46 +50,39 @@ int clSearch(const std::string& str, const std::string& substr) {
     }
     )";
 
-    // ------------------------------------------------------------------------
-    // 4. Build the program
-    // ------------------------------------------------------------------------
+    // build the program
     Timer* buildTimer = new Timer("Build Program");
     cl::Program program(context, kernelSource, true);
     program.build();
     delete buildTimer;
-    // ------------------------------------------------------------------------
-    // 5. Create device buffers
-    // ------------------------------------------------------------------------
+
     Timer *bufferTimer = new Timer("Create Buffers");
     int textLen    = static_cast<int>(str.size());
     int patternLen = static_cast<int>(substr.size());
 
     // Copy the text and pattern data to device
-    // +1 is optional if you want a null terminator, but we rely on lengths
     cl::Buffer d_text(
         context,
-        CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR,
+        CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR,
         sizeof(char) * textLen,
         (void*)str.data()
     );
     cl::Buffer d_pattern(
         context,
-        CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR,
+        CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR,
         sizeof(char) * patternLen,
         (void*)substr.data()
     );
 
-    // The result buffer holds a single integer (initially -1)
     cl::Buffer d_result(
         context,
-        CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+        CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
         sizeof(int),
         &hostResult
     );
     delete bufferTimer;
-    // ------------------------------------------------------------------------
-    // 6. Create and run the kernel
-    // ------------------------------------------------------------------------
+
+    // run kernel
     {
         PROFILE_SCOPE("Run Kernel");
 
@@ -107,9 +94,6 @@ int clSearch(const std::string& str, const std::string& substr) {
         kernel.setArg(4, d_result);
 
         // Enqueue kernel:
-        // We launch one work-item per character in the text:
-        //   - If i + patternLen <= textLen, it checks the substring
-        //   - If it matches, it writes `i` to d_result
         queue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
