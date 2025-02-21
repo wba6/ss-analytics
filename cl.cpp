@@ -30,10 +30,11 @@ int clSearch(const std::string& str, const std::string& substr) {
         __global int* result
     )
     {
-        int i = get_global_id(0);
+        int index = get_global_id(0) * 1000000;
 
+        for (int i = index; i <= 1000000; i++) {
         // If there's room for the pattern starting at i:
-        if (i + patternLen <= textLen)
+        if (sizeof(char)*i + patternLen <= textLen)
         {
             // Check each character in the pattern
             for (int j = 0; j < patternLen; j++) {
@@ -46,6 +47,7 @@ int clSearch(const std::string& str, const std::string& substr) {
             // If you only want the first match, you could avoid overwriting
             // if *result != -1 or use an atomic.
             *result = i;
+        }
         }
     }
     )";
@@ -67,6 +69,7 @@ int clSearch(const std::string& str, const std::string& substr) {
         sizeof(char) * textLen,
         (void*)str.data()
     );
+
     cl::Buffer d_pattern(
         context,
         CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR,
@@ -97,7 +100,7 @@ int clSearch(const std::string& str, const std::string& substr) {
         queue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
-            cl::NDRange(textLen),
+            cl::NDRange(str.length()/1000000),
             cl::NullRange
         );
     }
