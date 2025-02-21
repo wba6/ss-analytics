@@ -11,7 +11,21 @@ add_compile_definitions(PROFILING_ENABLED)
 include_directories(./vendor)
 add_subdirectory(./vendor/performance-analyzer)
 
+
 add_executable(ss_analytics main.cpp containsASM.asm cl.cpp implimentedFunctions.cpp standardFunctions.cpp)
+
+
+if (MSVC)
+        target_compile_options(ss_analytics PRIVATE
+                $<$<CONFIG:DEBUG>:/Zi>
+                $<$<CONFIG:RELEASE>:/O2>
+        )
+else()
+        target_compile_options(ss_analytics PRIVATE
+                $<$<CONFIG:DEBUG>:-g>
+                $<$<CONFIG:RELEASE>:-O3>
+        )
+endif()
 
 # Apply AVX2 only for C++ source files
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

@@ -30,24 +30,22 @@ int clSearch(const std::string& str, const std::string& substr) {
         __global int* result
     )
     {
-        int index = get_global_id(0) * 1000000;
+        int index = get_global_id(0) * 25;
 
-        for (int i = index; i <= 1000000; i++) {
-        // If there's room for the pattern starting at i:
-        if (sizeof(char)*i + patternLen <= textLen)
-        {
-            // Check each character in the pattern
-            for (int j = 0; j < patternLen; j++) {
+        int maxIndex = 24 + index;
+        for (int i = index; i <= maxIndex; i++) {
+          // If there's room for the pattern starting at i:
+            if ( patternLen <= textLen)
+            {
+              // Check each character in the pattern
+              for (int j = 0; j < patternLen; j++) {
                 if (text[i + j] != pattern[j]) {
-                    return;  // Mismatch, so no write to result
+                      return;  // Mismatch, so no write to result
                 }
+              }
+              // if *result != -1 or use an atomic.
+              *result = i;
             }
-            // If we got here, we found a match at position i.
-            // Store i in *result. This overwrites previous matches.
-            // If you only want the first match, you could avoid overwriting
-            // if *result != -1 or use an atomic.
-            *result = i;
-        }
         }
     }
     )";
@@ -59,8 +57,8 @@ int clSearch(const std::string& str, const std::string& substr) {
     delete buildTimer;
 
     Timer *bufferTimer = new Timer("Create Buffers");
-    int textLen    = static_cast<int>(str.size());
-    int patternLen = static_cast<int>(substr.size());
+    int textLen    = static_cast<int>(str.length());
+    int patternLen = static_cast<int>(substr.length());
 
     // Copy the text and pattern data to device
     cl::Buffer d_text(
@@ -100,7 +98,7 @@ int clSearch(const std::string& str, const std::string& substr) {
         queue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
-            cl::NDRange(str.length()/1000000),
+            cl::NDRange(textLen/25),
             cl::NullRange
         );
     }
