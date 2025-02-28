@@ -1,4 +1,5 @@
 #include "performance-analyzer/Timer.h"
+#include <CL/cl_platform.h>
 #include <ctime>
 #include <iostream>
 #define CL_HPP_TARGET_OPENCL_VERSION 300
@@ -17,38 +18,35 @@ int clSearch(const std::string& str, const std::string& substr) {
     cl::Context context(CL_DEVICE_TYPE_DEFAULT);
 
     // Create a command queue
-    cl::CommandQueue queue(context);
+    cl::CommandQueue queue(context, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE);
     delete setupTimer;
 
     //Each work-item checks if 'substr' occurs at position `i` of 'str'.
     std::string kernelSource = R"(
-    __kernel void searchNaive(
-        __global const char* text,
-        __global const char* pattern,
-        const int textLen,
-        const int patternLen,
-        __global int* result
-    )
-    {
-        int index = get_global_id(0) * 25;
+   __kernel void searchNaive(
+    __global const char16 *text,
+    __global const char16 *pattern,
+    const int textLen,     // number of char16 elements in text
+    const int patternLen,  // number of char16 elements in pattern
+    __global int *result
+)
+{
+    int i = get_global_id(0);
 
-        int maxIndex = 24 + index;
-        for (int i = index; i <= maxIndex; i++) {
-          // If there's room for the pattern starting at i:
-            if ( patternLen <= textLen)
-            {
-              // Check each character in the pattern
-              for (int j = 0; j < patternLen; j++) {
-                if (text[i + j] != pattern[j]) {
-                      return;  // Mismatch, so no write to result
-                }
-              }
-              // if *result != -1 or use an atomic.
-              *result = i;
+    // Check if there's enough room for the pattern starting at position i
+    if (i + patternLen <= textLen) {
+        // Compare each char16 element of the pattern
+        for (int j = 0; j < patternLen; j++) {
+            // Use all() to check that every component of the vector matches.
+            if (!all(text[i + j] == pattern[j])) {
+                return;  // Mismatch: exit this work-item early.
             }
         }
+        // If we reach here, the pattern matched at position i.
+        // Write the match index to the result (overwrites previous matches).
+        *result = i;
     }
-    )";
+}    )";
 
     // build the program
     Timer* buildTimer = new Timer("Build Program");
@@ -57,21 +55,27 @@ int clSearch(const std::string& str, const std::string& substr) {
     delete buildTimer;
 
     Timer *bufferTimer = new Timer("Create Buffers");
-    int textLen    = static_cast<int>(str.length());
-    int patternLen = static_cast<int>(substr.length());
+    //int textLen    = static_cast<int>(str.length());
+    //int patternLen = static_cast<int>(substr.length());
+    int numTextElements = (str.length() + 15) / 16;
+    int textLen    = numTextElements;
+    int patternLen = (substr.length() + 15) / 16;
+
 
     // Copy the text and pattern data to device
+
     cl::Buffer d_text(
         context,
-        CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR,
-        sizeof(char) * textLen,
-        (void*)str.data()
-    );
+        CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+        sizeof(cl_char16) * numTextElements,
+        (void*)str.data()  // textVector is your repacked array of cl_char16 elements
+   );
+
 
     cl::Buffer d_pattern(
         context,
         CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR,
-        sizeof(char) * patternLen,
+        sizeof(cl_char16) * patternLen,
         (void*)substr.data()
     );
 
@@ -98,7 +102,7 @@ int clSearch(const std::string& str, const std::string& substr) {
         queue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
-            cl::NDRange(textLen/25),
+            cl::NDRange(numTextElements),
             cl::NullRange
         );
     }
