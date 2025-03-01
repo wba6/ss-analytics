@@ -1,5 +1,4 @@
 #include "performance-analyzer/Timer.h"
-#include <CL/cl_platform.h>
 #include <ctime>
 #include <iostream>
 #define CL_HPP_TARGET_OPENCL_VERSION 300
@@ -97,14 +96,17 @@ int clSearch(const std::string& str, const std::string& substr) {
         kernel.setArg(2, textLen);
         kernel.setArg(3, patternLen);
         kernel.setArg(4, d_result);
-
+        
         // Enqueue kernel:
+        Timer* enqueTimer = new Timer("enqueueNDRangeKernel");
         queue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
             cl::NDRange(numTextElements),
             cl::NullRange
         );
+        delete enqueTimer;
+        queue.finish();
     }
 
     // Read back the result
