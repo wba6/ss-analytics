@@ -15,13 +15,13 @@ int clSearch(const std::string& str, const std::string& substr) {
     PROFILE_FUNCTION();
     int hostResult = -1;
 
-    Timer* setupTimer = new Timer("Setup Context and Queue");
+    Timer setupTimer("Setup Context and Queue");
     // Create context (first available device)
     cl::Context context(CL_DEVICE_TYPE_DEFAULT);
 
     // Create a command queue
     cl::CommandQueue queue(context, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE);
-    delete setupTimer;
+    setupTimer.stop();
 
     //Each work-item checks if 'substr' occurs at position `i` of 'str'.
     std::string kernelSource = R"(
@@ -51,12 +51,12 @@ int clSearch(const std::string& str, const std::string& substr) {
 }    )";
 
     // build the program
-    Timer* buildTimer = new Timer("Build Program");
+    Timer buildTimer("Build Program");
     cl::Program program(context, kernelSource, true);
     program.build();
-    delete buildTimer;
+    buildTimer.stop();
 
-    Timer *bufferTimer = new Timer("Create Buffers");
+    Timer bufferTimer("Create Buffers");
     //int textLen    = static_cast<int>(str.length());
     //int patternLen = static_cast<int>(substr.length());
     int numTextElements = (str.length() + 15) / 16;
@@ -87,7 +87,7 @@ int clSearch(const std::string& str, const std::string& substr) {
         sizeof(int),
         &hostResult
     );
-    delete bufferTimer;
+    bufferTimer.stop();
 
     // used for timing kernel
     cl_event event_obj;
@@ -105,7 +105,7 @@ int clSearch(const std::string& str, const std::string& substr) {
         kernel.setArg(4, d_result);
         
         // Enqueue kernel:
-        Timer* enqueTimer = new Timer("enqueueNDRangeKernel");
+        Timer enqueTimer("enqueueNDRangeKernel");
         queue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
@@ -115,7 +115,7 @@ int clSearch(const std::string& str, const std::string& substr) {
             &event
         );
 
-        delete enqueTimer;
+        enqueTimer.stop();
         event.wait();
         queue.finish();
     }
@@ -124,9 +124,9 @@ int clSearch(const std::string& str, const std::string& substr) {
     print_cl_time(event);
 
     // Read back the result
-    Timer* readTimer = new Timer("Read Result");
+    Timer readTimer("Read Result");
     cl::copy(queue, d_result, &hostResult, &hostResult + 1);
-    delete readTimer;
+    readTimer.stop();
     return hostResult;
 }
 
