@@ -1,6 +1,7 @@
 #include "performance-analyzer/Timer.h"
 #include <ctime>
 #include <iostream>
+#include <sys/types.h>
 #define CL_HPP_TARGET_OPENCL_VERSION 300
 #define CL_HPP_ENABLE_EXCEPTIONS
 #include <string>
@@ -17,7 +18,7 @@ int clSearch(const std::string& str, const std::string& substr) {
     cl::Context context(CL_DEVICE_TYPE_DEFAULT);
 
     // Create a command queue
-    cl::CommandQueue queue(context, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE);
+    cl::CommandQueue queue(context, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE);
     delete setupTimer;
 
     //Each work-item checks if 'substr' occurs at position `i` of 'str'.
@@ -86,6 +87,10 @@ int clSearch(const std::string& str, const std::string& substr) {
     );
     delete bufferTimer;
 
+    // used for timing kernel
+    cl_event event_obj;
+    cl::Event event(event_obj);
+
     // run kernel
     {
         PROFILE_SCOPE("Run Kernel");
@@ -103,11 +108,24 @@ int clSearch(const std::string& str, const std::string& substr) {
             kernel,
             cl::NullRange,
             cl::NDRange(numTextElements),
-            cl::NullRange
+            cl::NullRange,
+            nullptr,
+            &event
         );
+
         delete enqueTimer;
+        event.wait();
         queue.finish();
     }
+
+    // get timing event
+    cl_ulong time_start = 0;
+    cl_ulong time_end = 0;
+    event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
+    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end);
+
+    double second = (time_start - time_end) /1000000000.0; 
+    std::cout << "OpenCL exectution time is " << second << " seconds" << std::endl;  
 
     // Read back the result
     Timer* readTimer = new Timer("Read Result");
