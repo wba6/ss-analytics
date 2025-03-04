@@ -8,6 +8,8 @@
 #include <CL/opencl.hpp>
 #include "performance-analyzer/Profiler.h"
 
+
+void print_cl_time(cl::Event &event); 
 //This function can throw exceptions
 int clSearch(const std::string& str, const std::string& substr) {
     PROFILE_FUNCTION();
@@ -118,18 +120,39 @@ int clSearch(const std::string& str, const std::string& substr) {
         queue.finish();
     }
 
-    // get timing event
-    cl_ulong time_start = 0;
-    cl_ulong time_end = 0;
-    event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
-    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end);
-
-    double second = (time_start - time_end) /1000000000.0; 
-    std::cout << "OpenCL exectution time is " << second << " seconds" << std::endl;  
+    // print cl timing
+    print_cl_time(event);
 
     // Read back the result
     Timer* readTimer = new Timer("Read Result");
     cl::copy(queue, d_result, &hostResult, &hostResult + 1);
     delete readTimer;
     return hostResult;
+}
+
+void print_cl_time(cl::Event &event) {
+    
+    // returns the time passed in milliseconds
+    auto calcTime = [](cl_ulong &time_start, cl_ulong &time_end) {
+        return (time_end - time_start) /1000000.0; 
+    };
+
+    // get timing event
+    cl_ulong time_start = 0;
+    cl_ulong time_end = 0;
+
+    event.getProfilingInfo(CL_PROFILING_COMMAND_QUEUED, &time_start);
+    event.getProfilingInfo(CL_PROFILING_COMMAND_SUBMIT, &time_end);
+    std::cout << "OpenCL Queued submision time " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
+
+
+    event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
+    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end);
+    std::cout << "OpenCL exectution time is " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
+
+
+    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_start);
+    event.getProfilingInfo(CL_PROFILING_COMMAND_COMPLETE, &time_end);
+    std::cout << "OpenCL execution to completion time " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
+
 }
