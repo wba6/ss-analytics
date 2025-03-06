@@ -1,24 +1,27 @@
 #include "performance-analyzer/Timer.h"
 #include <ctime>
 #include <iostream>
+#include <sys/types.h>
 #define CL_HPP_TARGET_OPENCL_VERSION 300
 #define CL_HPP_ENABLE_EXCEPTIONS
 #include <string>
 #include <CL/opencl.hpp>
 #include "performance-analyzer/Profiler.h"
 
+
+void print_cl_time(cl::Event &event); 
 //This function can throw exceptions
 int clSearch(const std::string& str, const std::string& substr) {
     PROFILE_FUNCTION();
     int hostResult = -1;
 
-    Timer* setupTimer = new Timer("Setup Context and Queue");
+    Timer setupTimer("Setup Context and Queue");
     // Create context (first available device)
     cl::Context context(CL_DEVICE_TYPE_DEFAULT);
 
     // Create a command queue
-    cl::CommandQueue queue(context, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE);
-    delete setupTimer;
+    cl::CommandQueue queue(context, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE);
+    setupTimer.stop();
 
     //Each work-item checks if 'substr' occurs at position `i` of 'str'.
     std::string kernelSource = R"(
@@ -48,12 +51,12 @@ int clSearch(const std::string& str, const std::string& substr) {
 }    )";
 
     // build the program
-    Timer* buildTimer = new Timer("Build Program");
+    Timer buildTimer("Build Program");
     cl::Program program(context, kernelSource, true);
     program.build();
-    delete buildTimer;
+    buildTimer.stop();
 
-    Timer *bufferTimer = new Timer("Create Buffers");
+    Timer bufferTimer("Create Buffers");
     //int textLen    = static_cast<int>(str.length());
     //int patternLen = static_cast<int>(substr.length());
     int numTextElements = (str.length() + 15) / 16;
@@ -84,7 +87,11 @@ int clSearch(const std::string& str, const std::string& substr) {
         sizeof(int),
         &hostResult
     );
-    delete bufferTimer;
+    bufferTimer.stop();
+
+    // used for timing kernel
+    cl_event event_obj;
+    cl::Event event(event_obj);
 
     // run kernel
     {
@@ -98,20 +105,56 @@ int clSearch(const std::string& str, const std::string& substr) {
         kernel.setArg(4, d_result);
         
         // Enqueue kernel:
-        Timer* enqueTimer = new Timer("enqueueNDRangeKernel");
-        queue.enqueueNDRangeKernel(
+        Timer enqueTimer("enqueueNDRangeKernel");
+        int error = queue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
             cl::NDRange(numTextElements),
-            cl::NullRange
+            cl::NullRange,
+            nullptr,
+            &event
         );
-        delete enqueTimer;
+
+        std::cout << "Error Value " << error << std::endl;
+
+        enqueTimer.stop();
+        event.wait();
         queue.finish();
     }
 
+    // print cl timing
+    print_cl_time(event);
+
     // Read back the result
-    Timer* readTimer = new Timer("Read Result");
+    Timer readTimer("Read Result");
     cl::copy(queue, d_result, &hostResult, &hostResult + 1);
-    delete readTimer;
+    readTimer.stop();
     return hostResult;
+}
+
+void print_cl_time(cl::Event &event) {
+    
+    // returns the time passed in milliseconds
+    auto calcTime = [](cl_ulong &time_start, cl_ulong &time_end) {
+        return (time_end - time_start) /1000000.0; 
+    };
+
+    // get timing event
+    cl_ulong time_start = 0;
+    cl_ulong time_end = 0;
+
+    event.getProfilingInfo(CL_PROFILING_COMMAND_QUEUED, &time_start);
+    event.getProfilingInfo(CL_PROFILING_COMMAND_SUBMIT, &time_end);
+    std::cout << "OpenCL Queued submision time " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
+
+
+    event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
+    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end);
+    std::cout << "OpenCL exectution time is " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
+
+
+    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_start);
+    event.getProfilingInfo(CL_PROFILING_COMMAND_COMPLETE, &time_end);
+    std::cout << "OpenCL execution to completion time " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
+
 }
