@@ -106,7 +106,7 @@ int clSearch(const std::string& str, const std::string& substr) {
         
         // Enqueue kernel:
         Timer enqueTimer("enqueueNDRangeKernel");
-        queue.enqueueNDRangeKernel(
+        int error = queue.enqueueNDRangeKernel(
             kernel,
             cl::NullRange,
             cl::NDRange(numTextElements),
@@ -114,6 +114,8 @@ int clSearch(const std::string& str, const std::string& substr) {
             nullptr,
             &event
         );
+
+        std::cout << "Error Value " << error << std::endl;
 
         enqueTimer.stop();
         event.wait();
