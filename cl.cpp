@@ -1,4 +1,5 @@
 #include "performance-analyzer/Profiler.h"
+#include <OpenCL/cl.h>
 #include <ctime>
 #include <iostream>
 #include <sys/types.h>
@@ -68,7 +69,7 @@ int clSearch(const std::string& str, const std::string& substr) {
 
     cl::Buffer d_text(
         context,
-        CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+        CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
         sizeof(cl_char) * numTextElements,
         (void*)str.data()  // textVector is your repacked array of cl_char16 elements
    );
@@ -76,17 +77,19 @@ int clSearch(const std::string& str, const std::string& substr) {
 
     cl::Buffer d_pattern(
         context,
-        CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR,
+        CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR,
         sizeof(cl_char) * patternLen,
         (void*)substr.data()
     );
 
     cl::Buffer d_result(
         context,
-        CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-        sizeof(int),
-        &hostResult
+        CL_MEM_READ_WRITE,
+        sizeof(int)
     );
+
+    queue.enqueueWriteBuffer(d_result, CL_TRUE, 0, sizeof(int), &hostResult);
+
     bufferTimer.stop();
 
     // used for timing kernel
