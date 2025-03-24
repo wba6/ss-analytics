@@ -69,7 +69,7 @@ int clSearch(const std::string& str, const std::string& substr) {
 
     cl::Buffer d_text(
         context,
-        CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
         sizeof(cl_char) * numTextElements,
         (void*)str.data()  // textVector is your repacked array of cl_char16 elements
    );
@@ -77,24 +77,22 @@ int clSearch(const std::string& str, const std::string& substr) {
 
     cl::Buffer d_pattern(
         context,
-        CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR,
+        CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR,
         sizeof(cl_char) * patternLen,
         (void*)substr.data()
     );
 
     cl::Buffer d_result(
         context,
-        CL_MEM_READ_WRITE,
-        sizeof(int)
+        CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
+        sizeof(int),
+        &hostResult
     );
-
-    queue.enqueueWriteBuffer(d_result, CL_TRUE, 0, sizeof(int), &hostResult);
 
     bufferTimer.stop();
 
     // used for timing kernel
-    cl_event event_obj;
-    cl::Event event(event_obj);
+    cl::Event event;
 
     // run kernel
     {
