@@ -1,12 +1,13 @@
-#include "performance-analyzer/Timer.h"
+#include "performance-analyzer/Profiler.h"
 #include <ctime>
 #include <iostream>
 #include <sys/types.h>
-#define CL_HPP_TARGET_OPENCL_VERSION 300
 #define CL_HPP_ENABLE_EXCEPTIONS
 #include <string>
-#include <CL/opencl.hpp>
-#include "performance-analyzer/Profiler.h"
+#define CL_HPP_TARGET_OPENCL_VERSION 120 
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#include "CL/opencl.hpp"
+
 
 
 void print_cl_time(cl::Event &event); 
@@ -20,7 +21,7 @@ int clSearch(const std::string& str, const std::string& substr) {
     cl::Context context(CL_DEVICE_TYPE_DEFAULT);
 
     // Create a command queue
-    cl::CommandQueue queue(context, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE);
+    cl::CommandQueue queue(context,  CL_QUEUE_PROFILING_ENABLE);
     setupTimer.stop();
 
     //Each work-item checks if 'substr' occurs at position `i` of 'str'.
@@ -151,10 +152,4 @@ void print_cl_time(cl::Event &event) {
     event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
     event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end);
     std::cout << "OpenCL exectution time is " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
-
-
-    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_start);
-    event.getProfilingInfo(CL_PROFILING_COMMAND_COMPLETE, &time_end);
-    std::cout << "OpenCL execution to completion time " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
-
 }

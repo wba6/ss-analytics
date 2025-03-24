@@ -1,3 +1,6 @@
 [submodule "vendor/performance-analyzer"]
 	path = vendor/performance-analyzer
 	url = git@github.com:wba6/performance-analyzer.git
+[submodule "vendor/CL"]
+	path = vendor/CL
+	url = https://github.com/wba6/OpenCL-CLHPP.git
