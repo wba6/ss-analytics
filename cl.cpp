@@ -26,43 +26,42 @@ int clSearch(const std::string& str, const std::string& substr) {
 
     //Each work-item checks if 'substr' occurs at position `i` of 'str'.
     std::string kernelSource = R"(
-   __kernel void searchNaive(
-    __global const char16 *text,
-    __global const char16 *pattern,
-    const int textLen,     // number of char16 elements in text
-    const int patternLen,  // number of char16 elements in pattern
-    __global int *result
-)
-{
-    int i = get_global_id(0);
-
-    // Check if there's enough room for the pattern starting at position i
-    if (i + patternLen <= textLen) {
-        // Compare each char16 element of the pattern
-        for (int j = 0; j < patternLen; j++) {
-            // Use all() to check that every component of the vector matches.
-            if (!all(text[i + j] == pattern[j])) {
-                return;  // Mismatch: exit this work-item early.
+        __kernel void search(__global const char* str, __constant const char* substr,
+                             __global int* result, int str_length, int substr_length) {
+            int i = get_global_id(0);
+            // Only valid starting indices
+            if (i > str_length - substr_length) return;
+            // Compare the substring
+            for (int j = 0; j < substr_length; j++) {
+                if (str[i + j] != substr[j])
+                    return;
             }
+            // Match found: update result with the minimal index.
+            atomic_min(result, i);
         }
-        // If we reach here, the pattern matched at position i.
-        // Write the match index to the result (overwrites previous matches).
-        *result = i;
-    }
-}    )";
-
+    )";
     // build the program
     Timer buildTimer("Build Program");
-    cl::Program program(context, kernelSource, true);
-    program.build();
+    // Build the program.
+    cl::Program program(context, kernelSource);
+    try {
+        program.build();
+    } catch (cl::Error& e) {
+        // In case of a build error, print the build log.
+        auto devices = context.getInfo<CL_CONTEXT_DEVICES>();
+        std::cerr << "Build failed for device: "
+                  << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0])
+                  << std::endl;
+        throw;
+    }
     buildTimer.stop();
 
     Timer bufferTimer("Create Buffers");
     //int textLen    = static_cast<int>(str.length());
     //int patternLen = static_cast<int>(substr.length());
-    int numTextElements = (str.length() + 15) / 16;
+    int numTextElements = str.length();
     int textLen    = numTextElements;
-    int patternLen = (substr.length() + 15) / 16;
+    int patternLen = substr.length();
 
 
     // Copy the text and pattern data to device
@@ -70,7 +69,7 @@ int clSearch(const std::string& str, const std::string& substr) {
     cl::Buffer d_text(
         context,
         CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-        sizeof(cl_char16) * numTextElements,
+        sizeof(cl_char) * numTextElements,
         (void*)str.data()  // textVector is your repacked array of cl_char16 elements
    );
 
@@ -78,7 +77,7 @@ int clSearch(const std::string& str, const std::string& substr) {
     cl::Buffer d_pattern(
         context,
         CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR,
-        sizeof(cl_char16) * patternLen,
+        sizeof(cl_char) * patternLen,
         (void*)substr.data()
     );
 
@@ -98,12 +97,12 @@ int clSearch(const std::string& str, const std::string& substr) {
     {
         PROFILE_SCOPE("Run Kernel");
 
-        cl::Kernel kernel(program, "searchNaive");
+        cl::Kernel kernel(program, "search");
         kernel.setArg(0, d_text);
         kernel.setArg(1, d_pattern);
-        kernel.setArg(2, textLen);
-        kernel.setArg(3, patternLen);
-        kernel.setArg(4, d_result);
+        kernel.setArg(2, d_result);
+        kernel.setArg(3, textLen);
+        kernel.setArg(4, patternLen);
         
         // Enqueue kernel:
         Timer enqueTimer("enqueueNDRangeKernel");

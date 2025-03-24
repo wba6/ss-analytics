@@ -10,8 +10,8 @@
 std::string loadFile(std::string filename);
 int main() {
 
-    std::string str = loadFile("../500MB_random.txt");
-    std::string toFind = "[=j)kJM4^jj7<ZF/K1Zi";
+    std::string str = "this is my very nice long string to be searched";
+    std::string toFind = "be";
     int location{0}, location2{0},location3{0}, found{0}, found2{0};
     // Start the profiler
     Profiler::Get().BeginSession("Main", "profiler-results.json");
