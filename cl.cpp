@@ -1,5 +1,6 @@
 #include "performance-analyzer/Profiler.h"
 #include <OpenCL/cl.h>
+#include <climits>
 #include <ctime>
 #include <iostream>
 #include <sys/types.h>
@@ -15,7 +16,7 @@ void print_cl_time(cl::Event &event);
 //This function can throw exceptions
 int clSearch(const std::string& str, const std::string& substr) {
     PROFILE_FUNCTION();
-    int hostResult = -1;
+    int hostResult = INT_MAX;
 
     Timer setupTimer("Setup Context and Queue");
     // Create context (first available device)
@@ -58,15 +59,12 @@ int clSearch(const std::string& str, const std::string& substr) {
     buildTimer.stop();
 
     Timer bufferTimer("Create Buffers");
-    //int textLen    = static_cast<int>(str.length());
-    //int patternLen = static_cast<int>(substr.length());
     int numTextElements = str.length();
     int textLen    = numTextElements;
     int patternLen = substr.length();
 
 
     // Copy the text and pattern data to device
-
     cl::Buffer d_text(
         context,
         CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
