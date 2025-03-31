@@ -1,5 +1,11 @@
 #include "performance-analyzer/Profiler.h"
+
+#ifdef __APPLE__
 #include <OpenCL/cl.h>
+#else
+#include <CL/cl.h>
+#endif
+
 #include <climits>
 #include <ctime>
 #include <iostream>
