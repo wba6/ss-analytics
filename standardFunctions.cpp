@@ -27,3 +27,29 @@ int standardFind(const std::string &str, const std::string &subStr) {
     PROFILE_FUNCTION();
     return str.contains(subStr); ;
  }
+
+
+/*
+ * Standard string search function that returns the number occurrences of a substring 
+ *
+ * @param str : the string to search in
+ * @param subStr : the substring to search for
+ *
+ * @return the number of a occurrences of a substring
+ */
+int standardFindAll(const std::string &str, const std::string &subStr) {
+    PROFILE_FUNCTION();
+   // Find the first occurrence of target in text
+    size_t pos = str.find(subStr);
+
+    int occurrences{0};
+    // Continue finding until no more occurrences are found
+    while (pos != std::string::npos) {
+        occurrences++; 
+        // Find the next occurrence, starting just after the current one
+        pos = str.find(subStr, pos + 1);
+    }
+    
+    return occurrences;
+}
+
