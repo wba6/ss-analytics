@@ -31,6 +31,6 @@ def generate_random_file(filename, size_mb):
     print("\nFile generation complete.")
 
 if __name__ == '__main__':
-    # Generate a 1250 MB file named '500MB_random.txt'
+    # Generate a 1250 MB file named 'MB_random.txt'
     generate_random_file('500MB_random.txt',1250)
 
