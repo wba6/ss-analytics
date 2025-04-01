@@ -30,7 +30,7 @@ int main() {
     std::cout << "Location of standard find: " << standardLibFind << std::endl;
     std::cout << "Location OpenCL Search: " << openCLSearch << std::endl;
     std::cout << "Standard contains: " << standardContainsResult << std::endl;
-    std::cout << "Location of standard find all: " << standardFindAllResult << std::endl;
+    std::cout << "Contains # of standard find all: " << standardFindAllResult << std::endl;
     return 0;
 }
 
