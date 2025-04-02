@@ -10,7 +10,7 @@ add_compile_definitions(PROFILING_ENABLED)
 
 add_subdirectory(./vendor/performance-analyzer)
 
-add_executable(ss_analytics main.cpp cl.cpp implimentedFunctions.cpp standardFunctions.cpp vSearch.cpp)
+add_executable(ss_analytics main.cpp cl.cpp implimentedFunctions.cpp standardFunctions.cpp vkSearch.cpp)
 
 
 if (MSVC)
