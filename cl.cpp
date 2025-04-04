@@ -1,4 +1,5 @@
 #include "performance-analyzer/performance-analyzer.hpp"
+#include <vector>
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h>
@@ -20,9 +21,10 @@
 
 void record_cl_time(cl::Event &event); 
 //This function can throw exceptions
-int clSearch(const std::string& str, const std::string& substr) {
+std::vector<int> clSearch(const std::string& str, const std::string& substr) {
     PROFILE_FUNCTION();
-    int hostResult = INT_MAX;
+    std::vector<int> hostResults(100, -1);
+    int resultCount {0};
 
     Timer setupTimer("Setup Context and Queue");
 
@@ -35,20 +37,32 @@ int clSearch(const std::string& str, const std::string& substr) {
 
     //Each work-item checks if 'substr' occurs at position `i` of 'str'.
     std::string kernelSource = R"(
-        __kernel void search(__global const char* str, __constant const char* substr,
-                             __global int* result, int str_length, int substr_length) {
-            int i = get_global_id(0);
-            // Only valid starting indices
-            if (i > str_length - substr_length) return;
-            // Compare the substring
-            for (int j = 0; j < substr_length; j++) {
-                if (str[i + j] != substr[j])
-                    return;
+    __kernel void searchAllLimited(__global const char* str,
+                                   __constant const char* substr,
+                                   __global int* outMatches,
+                                   __global int* matchCount,
+                                   int strLen,
+                                   int subLen)
+    {
+        int i = get_global_id(0);
+
+        if (i <= strLen - subLen) {
+            // Compare substring at position i
+            for (int j = 0; j < subLen; ++j) {
+                if (str[i + j] != substr[j]) {
+                    return; // Not a match
+                }
             }
-            // Match found: update result with the minimal index.
-            atomic_min(result, i);
+            // It's a match: use an atomic to reserve a slot, if any remain
+            int slot = atomic_inc(matchCount);
+            // If we still have space in our array, record the position
+            if (slot < 100) {
+                outMatches[slot] = i;
+            }
         }
-    )";
+    }
+  )";
+
     // build the program
     Timer buildTimer("Build Program");
     // Build the program.
@@ -89,10 +103,17 @@ int clSearch(const std::string& str, const std::string& substr) {
 
     cl::Buffer d_result(
         context,
+        CL_MEM_WRITE_ONLY,
+        sizeof(int) * 100
+    );
+
+    cl::Buffer d_matchCount(
+        context,
         CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
         sizeof(int),
-        &hostResult
+        &resultCount
     );
+
 
     bufferTimer.stop();
 
@@ -103,12 +124,13 @@ int clSearch(const std::string& str, const std::string& substr) {
     {
         PROFILE_SCOPE("Run Kernel");
 
-        cl::Kernel kernel(program, "search");
+        cl::Kernel kernel(program, "searchAllLimited");
         kernel.setArg(0, d_text);
         kernel.setArg(1, d_pattern);
         kernel.setArg(2, d_result);
-        kernel.setArg(3, textLen);
-        kernel.setArg(4, patternLen);
+        kernel.setArg(3, d_matchCount);
+        kernel.setArg(4, textLen);
+        kernel.setArg(5, patternLen);
         
         // Enqueue kernel:
         Timer enqueTimer("enqueueNDRangeKernel");
@@ -134,9 +156,17 @@ int clSearch(const std::string& str, const std::string& substr) {
 
     // Read back the result
     Timer readTimer("Read Result");
-    cl::copy(queue, d_result, &hostResult, &hostResult + 1);
+    // Get the final value of matchCount
+    queue.enqueueReadBuffer(d_matchCount, CL_TRUE, 0, sizeof(int), &resultCount);
+
+    // Read the first min(matchCountHost, 100) entries
+    size_t numMatches = std::min((size_t)resultCount, (size_t)100);
+    queue.enqueueReadBuffer(d_result, CL_TRUE, 0,
+                            sizeof(int)*numMatches,
+                            hostResults.data());
+
     readTimer.stop();
-    return hostResult;
+    return hostResults;
 }
 
 void record_cl_time(cl::Event &event) {
