@@ -51,6 +51,6 @@ std::vector<int> standardFindAll(const std::string &str, const std::string &subS
         pos = str.find(subStr, pos + 1);
     }
     
-    return std::move(occurrences);
+    return occurrences;
 }
 
