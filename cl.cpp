@@ -161,13 +161,13 @@ std::vector<int> clSearch(const std::string& str, const std::string& substr) {
 
     // Read the first min(matchCountHost, 100) entries
     size_t numMatches = std::min((size_t)resultCount, (size_t)100);
+    hostResults.resize(numMatches);
     queue.enqueueReadBuffer(d_result, CL_TRUE, 0,
                             sizeof(int)*numMatches,
                             hostResults.data());
 
     readTimer.stop();
-    hostResults.resize(numMatches);
-    return std::move(hostResults);
+    return hostResults;
 }
 
 void record_cl_time(cl::Event &event) {
