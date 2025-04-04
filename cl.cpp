@@ -166,6 +166,7 @@ std::vector<int> clSearch(const std::string& str, const std::string& substr) {
                             hostResults.data());
 
     readTimer.stop();
+    hostResults.resize(numMatches);
     return std::move(hostResults);
 }
 
