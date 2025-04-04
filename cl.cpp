@@ -166,7 +166,7 @@ std::vector<int> clSearch(const std::string& str, const std::string& substr) {
                             hostResults.data());
 
     readTimer.stop();
-    return hostResults;
+    return std::move(hostResults);
 }
 
 void record_cl_time(cl::Event &event) {

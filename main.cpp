@@ -15,7 +15,7 @@ int main() {
 
     std::string str = loadFile("500MB_random.txt");
     std::string toFind = "wj%|0fY41AN";
-    int stringSearchManual{0}, standardLibFind{0}, vkSearchResult{0}, standardContainsResult{0}, standardFindAllResult{0};
+    int stringSearchManual{0}, standardLibFind{0}, vkSearchResult{0}, standardContainsResult{0};
     // Start the profiler
     Profiler::Get().BeginSession("Main", "../profiler-results.json");
 
@@ -25,15 +25,17 @@ int main() {
     std::vector<int> openCLSearch = clSearch(str, toFind);
     //vkSearchResult = vulkanStringSearch(str, toFind);
     standardContainsResult = standardContains(str, toFind);
-    standardFindAllResult = standardFindAll(str,toFind);
+    std::vector<int> standardFindAllResult = standardFindAll(str,toFind);
 
     // end the profiler
     Profiler::Get().EndSession();
     std::cout << "Location of string search manual: " << stringSearchManual << std::endl;
     std::cout << "Location of standard find: " << standardLibFind << std::endl;
-    printVector(openCLSearch);
     std::cout << "Standard contains: " << standardContainsResult << std::endl;
-    std::cout << "Contains # of standard find all: " << standardFindAllResult << std::endl;
+    std::cout << "Locations of opencl search :";
+    printVector(openCLSearch);
+    std::cout << "Contains # of standard find all: ";
+    printVector(standardFindAllResult);
     return 0;
 }
 
@@ -47,6 +49,7 @@ std::string loadFile(std::string filename){
  void printVector(const std::vector<int>& vec) {
     std::cout << "[ ";
     for (int val : vec) {
+        if (val == -1) continue;
         std::cout << val << " ";
     }
     std::cout << "]\n";
