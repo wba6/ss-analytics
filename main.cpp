@@ -34,7 +34,7 @@ int main() {
     std::cout << "Standard contains: " << standardContainsResult << std::endl;
     std::cout << "Locations of opencl search :";
     printVector(openCLSearch);
-    std::cout << "Contains # of standard find all: ";
+    std::cout << "standard find all: ";
     printVector(standardFindAllResult);
     return 0;
 }
