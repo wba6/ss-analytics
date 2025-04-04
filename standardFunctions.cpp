@@ -36,7 +36,7 @@ int standardFind(const std::string &str, const std::string &subStr) {
  * @param str : the string to search in
  * @param subStr : the substring to search for
  *
- * @return the number of a occurrences of a substring
+ * @return the occurrences of a substring
  */
 std::vector<int> standardFindAll(const std::string &str, const std::string &subStr) {
     PROFILE_FUNCTION();
