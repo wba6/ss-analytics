@@ -31,6 +31,7 @@ target_compile_features(ss_analytics PRIVATE cxx_auto_type)
 target_link_libraries(ss_analytics PRIVATE performance_analyzer OpenCL::OpenCL ${Vulkan_LIBRARIES})
 target_include_directories( ss_analytics PUBLIC 
     ${PROJECT_SOURCE_DIR}/vendor
+    ${PROJECT_SOURCE_DIR}/vendor/performance_analyzer
     ${PROJECT_SOURCE_DIR}/vendor/CL/include
     ${Vulkan_INCLUDE_DIRS}
 )

@@ -1,4 +1,4 @@
-#include "performance-analyzer/Profiler.h"
+#include "performance-analyzer/performance-analyzer.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h>
@@ -18,13 +18,14 @@
 
 
 
-void print_cl_time(cl::Event &event); 
+void record_cl_time(cl::Event &event); 
 //This function can throw exceptions
 int clSearch(const std::string& str, const std::string& substr) {
     PROFILE_FUNCTION();
     int hostResult = INT_MAX;
 
     Timer setupTimer("Setup Context and Queue");
+
     // Create context (first available device)
     cl::Context context(CL_DEVICE_TYPE_DEFAULT);
 
@@ -119,16 +120,17 @@ int clSearch(const std::string& str, const std::string& substr) {
             nullptr,
             &event
         );
-
-        std::cout << "Error Value " << error << std::endl;
-
         enqueTimer.stop();
+
+        std::cout << "CL Error Value " << error << std::endl;
+
         event.wait();
         queue.finish();
-    }
 
-    // print cl timing
-    print_cl_time(event);
+        // record cl timing
+        record_cl_time(event);
+
+    }
 
     // Read back the result
     Timer readTimer("Read Result");
@@ -137,11 +139,11 @@ int clSearch(const std::string& str, const std::string& substr) {
     return hostResult;
 }
 
-void print_cl_time(cl::Event &event) {
+void record_cl_time(cl::Event &event) {
     
-    // returns the time passed in milliseconds
+    // returns the time passed in microseconds 
     auto calcTime = [](cl_ulong &time_start, cl_ulong &time_end) {
-        return (time_end - time_start) /1000000.0; 
+        return (time_end - time_start) /1000.0f; 
     };
 
     // get timing event
@@ -150,10 +152,10 @@ void print_cl_time(cl::Event &event) {
 
     event.getProfilingInfo(CL_PROFILING_COMMAND_QUEUED, &time_start);
     event.getProfilingInfo(CL_PROFILING_COMMAND_SUBMIT, &time_end);
-    std::cout << "OpenCL Queued submision time " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
-
+    PROFILE_CUSTOM_TIME("GPU Queue", calcTime(time_start, time_end));
+    
 
     event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
     event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end);
-    std::cout << "OpenCL exectution time is " << calcTime(time_start, time_end) << " milliseconds" << std::endl;  
+    PROFILE_CUSTOM_TIME("GPU Exec", calcTime(time_start, time_end));
 }

@@ -1,5 +1,5 @@
 #include "standardFunctions.hpp"
-#include "performance-analyzer/Profiler.h"
+#include "performance-analyzer/performance-analyzer.hpp"
 #include <string>
 
 /*

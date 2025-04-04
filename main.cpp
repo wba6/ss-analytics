@@ -6,7 +6,7 @@
 #include "cl.hpp"
 #include "standardFunctions.hpp"
 #include "implimentedFunctions.hpp"
-#include "performance-analyzer/Profiler.h"
+#include "performance-analyzer/performance-analyzer.hpp"
 
 std::string loadFile(std::string filename);
 int main() {

@@ -1,10 +1,7 @@
 #include <vulkan/vulkan.h>
-#include <iostream>
-#include <vector>
-#include <stdexcept>
 #include <cstring>
 #include <cassert>
-#include "performance-analyzer/Profiler.h"
+#include "performance-analyzer/performance-analyzer.hpp"
 #include "vkSearch.hpp"
 // Helper macro for error checking.
 #define VK_CHECK(x) do { VkResult err = x; if (err) { \
