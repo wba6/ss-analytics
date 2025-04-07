@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(ss_analytics LANGUAGES CXX ASM_NASM)
+project(ss_analytics LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
