@@ -2,7 +2,6 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include "vkSearch.hpp"
 #include "cl.hpp"
 #include "standardFunctions.hpp"
 #include "implimentedFunctions.hpp"
