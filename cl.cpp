@@ -7,7 +7,6 @@
 #include <CL/cl.h>
 #endif
 
-#include <climits>
 #include <ctime>
 #include <iostream>
 #include <sys/types.h>
@@ -144,7 +143,7 @@ std::vector<int> clSearch(const std::string& str, const std::string& substr) {
         );
         enqueTimer.stop();
 
-        std::cout << "CL Error Value " << error << std::endl;
+        if (error != 0) { std::cerr << "CL Error Value " << error << std::endl;}
 
         event.wait();
         queue.finish();
