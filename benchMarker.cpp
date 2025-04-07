@@ -1,6 +1,8 @@
-/*
- * Implimentation file for the BenchMarker class
+/**
+ * @file benchMarker.cpp
+ * @brief Implementation file for the BenchMarker class.
  *
+ * This file contains the implementation for benchmarking functions that operate on test data files.
  */
 
 #include "benchMarker.hpp"
@@ -13,11 +15,33 @@
 #include <iostream>
 #include "performance-analyzer/performance-analyzer.hpp"
 
+/**
+ * @brief Constructs a BenchMaker instance.
+ *
+ * Initializes the BenchMaker with vectors of function objects for single and multiple integer returns,
+ * a vector of test file sizes (in MB), and sets the default test data file name.
+ *
+ * @param singleReturn Vector of functions that return an integer given two strings.
+ * @param multiReturn Vector of functions that return a vector of integers given two strings.
+ * @param testSizes Vector of test file sizes (in megabytes) to be used during benchmarking.
+ */
 BenchMaker::BenchMaker(std::vector<std::function<int(std::string&, std::string&)>>& singleReturn,
                 std::vector<std::function<std::vector<int>(std::string&, std::string&)>>& multiReturn,
                 std::vector<unsigned int> testSizes)
 :m_singleReturnVec(singleReturn), m_multiReturnVec(multiReturn), m_testSizes(testSizes), m_testDataFileName("testData.txt"){};
 
+/**
+ * @brief Runs the benchmark tests.
+ *
+ * For each file size specified in m_testSizes, this function generates a test file with random data
+ * and inserted substring occurrences, loads the file content, and then runs the functions in both
+ * m_singleReturnVec and m_multiReturnVec while profiling their performance.
+ * The profiling results are written to a JSON file named using the provided prefix and file size.
+ *
+ * @param outputFilePrefix Prefix for the output JSON file containing benchmark results.
+ * @param testDataFileName Name of the file used for test data generation and reading.
+ * @return true if the benchmark completes successfully.
+ */
 bool BenchMaker::runBenchmark(std::string& outputFilePrefix, std::string& testDataFileName) {
     m_testDataFileName = testDataFileName;    
 
@@ -45,6 +69,15 @@ bool BenchMaker::runBenchmark(std::string& outputFilePrefix, std::string& testDa
     return true;
 }
 
+
+/**
+ * @brief Loads the entire content of a file into a string.
+ *
+ * Opens the specified file in text mode, reads its entire content, and returns it as a std::string.
+ *
+ * @param fileName Name of the file to read.
+ * @return A std::string containing the contents of the file.
+ */
 std::string BenchMaker::loadStringFromFile(std::string& fileName) {
     std::ifstream t(fileName);
     std::stringstream buffer;
@@ -52,6 +85,22 @@ std::string BenchMaker::loadStringFromFile(std::string& fileName) {
     return (buffer.str());
 }
 
+
+/**
+ * @brief Generates a test file with random data and specific substring occurrences.
+ *
+ * Generates a file with the specified size (in MB) filled with random printable ASCII characters.
+ * Inserts a given substring a specified number of times at random positions within the file.
+ * The resulting content is written to the file specified by m_testDataFileName.
+ *
+ * @param fileSizeMB Size of the file to generate in megabytes.
+ * @param substring The substring to insert into the file.
+ * @param occurrences The number of times the substring should appear in the file.
+ * @return true if the file is generated and written successfully.
+ *
+ * @throws std::invalid_argument if the substring is empty or if the file size is insufficient to contain the specified number of substring occurrences.
+ * @throws std::runtime_error if the file cannot be opened for writing.
+ */
 bool BenchMaker::generateFile(unsigned int fileSizeMB, std::string& substring, unsigned int occurrences) {
     // Convert file size from MB to bytes
     unsigned int fileSize = fileSizeMB * 1024 * 1024;
@@ -91,7 +140,7 @@ bool BenchMaker::generateFile(unsigned int fileSizeMB, std::string& substring, u
         }
     }
 
-    // Finally, write the buffer to the specified file
+    // write the buffer to the specified file
     std::ofstream outFile(m_testDataFileName, std::ios::binary);
     if (!outFile) {
         throw std::runtime_error("Failed to open file: " + m_testDataFileName);
@@ -118,6 +167,4 @@ void BenchMaker::runFunctions(const std::vector<T>& vec, std::string& data, std:
         }
     }
 }
-
-
 
