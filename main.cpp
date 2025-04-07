@@ -2,16 +2,38 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <vector>
 #include "vkSearch.hpp"
 #include "cl.hpp"
 #include "standardFunctions.hpp"
 #include "implimentedFunctions.hpp"
+#include "benchMarker.hpp"
 #include "performance-analyzer/performance-analyzer.hpp"
 
 std::string loadFile(std::string filename);
 void printVector(const std::vector<int>& vec); 
 int main() {
+
+    std::vector<std::function<int(std::string&, std::string&)>> benchMarkedFunctions {
+        stringSearch,
+        standardFind,
+        standardContains,
+    };    
+
+    std::vector<unsigned int> benchMarkFileSizes {
+        10,
+        100,
+        500,
+        1000,
+        1500
+    };
+
+    BenchMaker benchMarker(benchMarkedFunctions, benchMarkFileSizes);
+
+    std::string filePrefix = "../testOutput";
+    std::string testDataName = "testData.txt";
+    benchMarker.runBenchmark(filePrefix, testDataName);
 
     std::string str = loadFile("500MB_random.txt");
     std::string toFind = "wj%|0fY41AN";
