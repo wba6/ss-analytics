@@ -21,6 +21,9 @@ public:
 private:
     std::string loadStringFromFile(std::string& fileName);
     bool generateFile(unsigned int fileSizeMB, std::string& substring, unsigned int occurances); 
+    
+    template<typename T>
+    void runFunctions(const std::vector<T>& vec, std::string& data, std::string& substring); 
 
 private:
     std::vector<std::function<int(std::string&, std::string&)>>& m_singleReturnVec;

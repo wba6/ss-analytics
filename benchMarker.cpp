@@ -32,13 +32,10 @@ bool BenchMaker::runBenchmark(std::string& outputFilePrefix, std::string& testDa
         outputFileName += "MB.json";
 
         Profiler::Get().BeginSession("BenchMaker", outputFileName);
-        for(auto func: m_singleReturnVec) {
-            func(data, substring); 
-        }
 
-        for(auto func: m_multiReturnVec) {
-            func(data, substring); 
-        }
+        runFunctions(m_singleReturnVec, data, substring);
+        runFunctions(m_multiReturnVec, data, substring);
+
         Profiler::Get().EndSession();
         
         std::cout << "Finished test with file size: " << size << "MB\n";
@@ -104,4 +101,23 @@ bool BenchMaker::generateFile(unsigned int fileSizeMB, std::string& substring, u
 
     return true;
 }
+
+template<typename T>
+void BenchMaker::runFunctions(const std::vector<T>& vec, std::string& data, std::string& substring) {
+    // Assume the return type is std::vector<int>
+    if (!vec.empty()) {
+        // Call the first function and store its return value.
+        auto expected = vec.front()(data, substring);
+        
+        // Iterate through the remaining functions.
+        for (size_t i = 1; i < vec.size(); ++i) {
+            auto result = vec[i](data, substring);
+            if (result != expected) {
+                throw std::runtime_error("Inconsistent return value detected at function index " + std::to_string(i));
+            }
+        }
+    }
+}
+
+
 
