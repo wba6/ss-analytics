@@ -12,7 +12,9 @@
 
 class BenchMaker {
 public:
-    BenchMaker(std::vector<std::function<int(std::string&, std::string&)>>& functionVector, std::vector<unsigned int> testSizes);
+    BenchMaker(std::vector<std::function<int(std::string&, std::string&)>>& singleReturn,
+                std::vector<std::function<std::vector<int>(std::string&, std::string&)>>& multiReturn,
+                std::vector<unsigned int> testSizes);
 
     bool runBenchmark(std::string& outputFilePrefix, std::string& testDataFileName);
 
@@ -21,7 +23,8 @@ private:
     bool generateFile(unsigned int fileSizeMB, std::string& substring, unsigned int occurances); 
 
 private:
-    std::vector<std::function<int(std::string&, std::string&)>>& m_funcVec;
+    std::vector<std::function<int(std::string&, std::string&)>>& m_singleReturnVec;
+    std::vector<std::function<std::vector<int>(std::string&, std::string&)>>& m_multiReturnVec;
     std::vector<unsigned int> m_testSizes;
     std::string m_testDataFileName;
 };

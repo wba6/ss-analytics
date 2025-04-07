@@ -13,15 +13,17 @@
 #include <iostream>
 #include "performance-analyzer/performance-analyzer.hpp"
 
-BenchMaker::BenchMaker(std::vector<std::function<int(std::string&, std::string&)>>& functionVector, std::vector<unsigned int> testSizes)
-:m_funcVec(functionVector), m_testSizes(testSizes), m_testDataFileName("testData.txt"){};
+BenchMaker::BenchMaker(std::vector<std::function<int(std::string&, std::string&)>>& singleReturn,
+                std::vector<std::function<std::vector<int>(std::string&, std::string&)>>& multiReturn,
+                std::vector<unsigned int> testSizes)
+:m_singleReturnVec(singleReturn), m_multiReturnVec(multiReturn), m_testSizes(testSizes), m_testDataFileName("testData.txt"){};
 
 bool BenchMaker::runBenchmark(std::string& outputFilePrefix, std::string& testDataFileName) {
     m_testDataFileName = testDataFileName;    
 
     std::string substring = "akdl;jfksjft";
     for(auto size: m_testSizes) {
-        std::cout << "Running test with file size: " << size << std::endl;
+        std::cout << "Running test with file size: " << size << "MB" << std::endl;
         generateFile(size, substring, 10);
 
         std::string data = loadStringFromFile(m_testDataFileName);
@@ -30,7 +32,11 @@ bool BenchMaker::runBenchmark(std::string& outputFilePrefix, std::string& testDa
         outputFileName += "MB.json";
 
         Profiler::Get().BeginSession("BenchMaker", outputFileName);
-        for(auto func: m_funcVec) {
+        for(auto func: m_singleReturnVec) {
+            func(data, substring); 
+        }
+
+        for(auto func: m_multiReturnVec) {
             func(data, substring); 
         }
         Profiler::Get().EndSession();

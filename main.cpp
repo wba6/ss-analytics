@@ -1,3 +1,4 @@
+#include <functional>
 #include <sstream>
 #include <cstring>
 #include <iostream>
@@ -15,11 +16,16 @@ std::string loadFile(std::string filename);
 void printVector(const std::vector<int>& vec); 
 int main() {
 
-    std::vector<std::function<int(std::string&, std::string&)>> benchMarkedFunctions {
+    std::vector<std::function<int(std::string&, std::string&)>> benchMarkedSingleReturn {
         stringSearch,
         standardFind,
         standardContains,
     };    
+
+    std::vector<std::function<std::vector<int>(std::string&,std::string&)>> benchMarkedMultiReturn { 
+        clSearch,
+        standardFindAll
+    };
 
     std::vector<unsigned int> benchMarkFileSizes {
         10,
@@ -29,7 +35,7 @@ int main() {
         1500
     };
 
-    BenchMaker benchMarker(benchMarkedFunctions, benchMarkFileSizes);
+    BenchMaker benchMarker(benchMarkedSingleReturn, benchMarkedMultiReturn, benchMarkFileSizes);
 
     std::string filePrefix = "../testOutput";
     std::string testDataName = "testData.txt";
