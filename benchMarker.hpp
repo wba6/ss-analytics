@@ -1,6 +1,6 @@
 /*
  * benchMaker.hpp is the include file for the benchMaker class which is used
- * to run bench marks for various searching algrithms at different file sizes.
+ * to run bench marks for various searching algorithms at different file sizes.
  * 
  */
 
