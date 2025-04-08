@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "cl.hpp"
+#include "vkSearch.hpp"
 #include "standardFunctions.hpp"
 #include "implimentedFunctions.hpp"
 #include "benchMarker.hpp"
