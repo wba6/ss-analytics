@@ -10,7 +10,7 @@ add_compile_definitions(PROFILING_ENABLED)
 
 add_subdirectory(./vendor/performance-analyzer)
 
-add_executable(ss_analytics main.cpp cl.cpp implimentedFunctions.cpp standardFunctions.cpp benchMarker.cpp)
+add_executable(ss_analytics main.cpp cl.cpp implimentedFunctions.cpp standardFunctions.cpp vkSearch.cpp benchMarker.cpp)
 
 
 if (MSVC)
@@ -26,10 +26,12 @@ else()
 endif()
 
 find_package(OpenCL REQUIRED)
+find_package(Vulkan REQUIRED)
 target_compile_features(ss_analytics PRIVATE cxx_auto_type)
-target_link_libraries(ss_analytics PRIVATE performance_analyzer OpenCL::OpenCL) 
+target_link_libraries(ss_analytics PRIVATE performance_analyzer OpenCL::OpenCL ${Vulkan_LIBRARIES}) 
 target_include_directories( ss_analytics PUBLIC 
     ${PROJECT_SOURCE_DIR}/vendor
     ${PROJECT_SOURCE_DIR}/vendor/performance_analyzer
     ${PROJECT_SOURCE_DIR}/vendor/CL/include
+    ${Vulkan_INCLUDE_DIR}
 )
