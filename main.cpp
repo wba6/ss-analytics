@@ -11,6 +11,7 @@
 
 int main() {
 
+    /*
     std::vector<std::function<int(std::string&, std::string&)>> benchMarkedSingleReturn {
         stringSearch,
         standardFind
@@ -34,6 +35,9 @@ int main() {
     std::string filePrefix = "../testOutput";
     std::string testDataName = "testData.txt";
     benchMarker.runBenchmark(filePrefix, testDataName);
+    */
+
+    vulkanSquare();
 
     return 0;
 }

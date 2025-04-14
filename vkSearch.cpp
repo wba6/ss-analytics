@@ -26,7 +26,7 @@ int vulkanStringSearch(const std::string &haystack, const std::string &needle) {
     return foundIndex;
 }
 
-void vulkanSqaure(const int number) {
+void vulkanSquare() {
 
     const uint32_t NumElements = 10;
     const uint32_t BufferSize = NumElements * sizeof(int32_t);
@@ -40,13 +40,24 @@ void vulkanSqaure(const int number) {
         VK_API_VERSION_1_1  // Vulkan API Version
     };
 
+    // Define validation layers (only)
+    const std::vector<const char*> Layers = { 
+        "VK_LAYER_KHRONOS_validation" 
+    };
+
+    // Define instance extensions (include the portability extension here)
+    const std::vector<const char*> Extensions = {
+        "VK_KHR_portability_enumeration"
+    };
+
     // Enable validation layer
-    const std::vector<const char*> Layers = { "VK_LAYER_KHRONOS_validation" };
     vk::InstanceCreateInfo InstanceCreateInfo (
-            vk::InstanceCreateFlags(),    // Flags
+            vk::InstanceCreateFlags(vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR),    // Flags
             &AppInfo,                   // Application info
             Layers.size(),              // Layers Count
-            Layers.data()               // Layers
+            Layers.data(),               // Layers
+            Extensions.size(),
+            Extensions.data()
     );
     vk::Instance Instance = vk::createInstance(InstanceCreateInfo);
 
@@ -130,7 +141,20 @@ void vulkanSqaure(const int number) {
     // Create pipline for compute shader 14:56
 
     //ShaderContents contains the data in .spv shader file
-    std::string ShaderContents = "";
+    std::string ShaderContents = R"(
+            #version 430
+            layout(local_size_x = 1, local_size_y = 1) in;
+
+            layout(std430, binding = 0) buffer lay0 {int inbuf[]; };
+            layout(std430, binding = 1) buffer lay1 {int outbuf[]; };
+
+            void main() {
+                const uint id = gl_GlobalInvocationID.x;
+
+                outbuf[id] = inbuf[id] * inbuf[id];
+            }
+        )";
+
     const size_t ShaderContentsSize = ShaderContents.size();
     const uint32_t* ShaderContentsData = (const uint32_t*) ShaderContents.data();
     vk::ShaderModuleCreateInfo ShaderModuleCreateInfo(
@@ -217,8 +241,49 @@ void vulkanSqaure(const int number) {
     auto CmdBuffers = Device.allocateCommandBuffers(CommandBufferAllocInfo);
     vk::CommandBuffer CmdBuffer = CmdBuffers.front();
 
+    // Record commands 17:26
+    vk::CommandBufferBeginInfo CmdBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    CmdBuffer.begin(CmdBufferBeginInfo);
+    CmdBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, ComputePipeline);
+    CmdBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eCompute,
+            PipelineLayout,
+            0,
+            { DescriptorSet },
+            {}
+    );
+    CmdBuffer.dispatch(NumElements, 1, 1);
+    CmdBuffer.end();
 
+    // Submit work and wait
+    vk::Queue Queue = Device.getQueue(ComputeQueueFamilyIndex, 0);
+    vk::Fence Fence = Device.createFence(vk::FenceCreateInfo());
 
+    vk::SubmitInfo SubmitInfo(
+            0,
+            nullptr,
+            nullptr,
+            1,
+            &CmdBuffer
+    );
+    Queue.submit({ SubmitInfo }, Fence);
+    Device.waitForFences(
+            {Fence},
+            true,
+            uint64_t(-1)
+    );
+
+    // Read output
+    int32_t* OutBufferPtr = static_cast<int32_t*>(Device.mapMemory(OutBufferMemory, 0, BufferSize));
+    for(uint32_t i = 0; i < NumElements; ++i) {
+        std::cout << OutBufferPtr[i] << " ";
+    }
+    std::cout << std::endl;
+    Device.unmapMemory(OutBufferMemory);
+
+    Device.freeMemory(OutBufferMemory);
+    Device.destroyBuffer(OutBuffer);
+    Device.destroy();
 }
 
 
