@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <vulkan/vulkan.hpp>
@@ -127,6 +128,95 @@ void vulkanSqaure(const int number) {
     Device.bindBufferMemory(OutBuffer, OutBufferMemory, 0);
 
     // Create pipline for compute shader 14:56
+
+    //ShaderContents contains the data in .spv shader file
+    std::string ShaderContents = "";
+    const size_t ShaderContentsSize = ShaderContents.size();
+    const uint32_t* ShaderContentsData = (const uint32_t*) ShaderContents.data();
+    vk::ShaderModuleCreateInfo ShaderModuleCreateInfo(
+            vk::ShaderModuleCreateFlags(),      //Flags
+            ShaderContentsSize,                 // code size
+            ShaderContentsData                  // code
+    );
+    vk::ShaderModule ShaderModule = Device.createShaderModule(ShaderModuleCreateInfo);
+
+    // Descriptor set layout
+    const std::vector<vk::DescriptorSetLayoutBinding> DescriptorSetLayoutBinding = {
+        {0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},
+        {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute}
+    };
+    vk::DescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo (
+            vk::DescriptorSetLayoutCreateFlags(),
+            DescriptorSetLayoutBinding
+    );
+    vk::DescriptorSetLayout DescriptorSetLayout = Device.createDescriptorSetLayout(DescriptorSetLayoutCreateInfo);
+
+
+    // pipline Layout 
+    vk::PipelineLayoutCreateInfo PipelineLayoutCreateInfo (
+            vk::PipelineLayoutCreateFlags(),
+            DescriptorSetLayout
+    );
+    vk::PipelineLayout PipelineLayout = Device.createPipelineLayout(PipelineLayoutCreateInfo);
+    vk::PipelineCache PipelineCache = Device.createPipelineCache(vk::PipelineCacheCreateInfo());
+
+    // Pipeline
+    vk::PipelineShaderStageCreateInfo PipelineShaderCreateInfo(
+            vk::PipelineShaderStageCreateFlags(),       // Flags
+            vk::ShaderStageFlagBits::eCompute,          // stage 
+            ShaderModule,                               // Shader module 
+            "main"                                      // Shader entry point
+    );
+    vk::ComputePipelineCreateInfo ComputePipelineCreateInfo(
+            vk::PipelineCreateFlags(),      // flags 
+            PipelineShaderCreateInfo,       // shader create info struct
+            PipelineLayout                  // pipeline layout
+    );
+    vk::Pipeline ComputePipeline = Device.createComputePipeline(PipelineCache, ComputePipelineCreateInfo).value;
+
+    // Descriptor pool
+    vk::DescriptorPoolSize DescriptorPoolSize(
+            vk::DescriptorType::eStorageBuffer,
+            2
+    );
+    vk::DescriptorPoolCreateInfo DescriptorPoolCreateInfo(
+            vk::DescriptorPoolCreateFlags(),
+            1,
+            DescriptorPoolSize
+    );
+    vk::DescriptorPool DescriptorPool = Device.createDescriptorPool(DescriptorPoolCreateInfo);
+
+    // Descriptor sets 
+    vk::DescriptorSetAllocateInfo allocInfo(DescriptorPool, 1, &DescriptorSetLayout);
+    auto DescriptorSets = Device.allocateDescriptorSets(allocInfo);
+    vk::DescriptorSet DescriptorSet = DescriptorSets.front();
+    vk::DescriptorBufferInfo InBufferInfo(InBuffer, 0, NumElements * sizeof(int32_t));
+    vk::DescriptorBufferInfo OutBufferInfo(OutBuffer, 0, NumElements * sizeof(int32_t));
+
+    // update descriptor sets to use out Buffers
+    const std::vector<vk::WriteDescriptorSet> WriteDescriptorSets = {
+        {DescriptorSet, 0,0,1, vk::DescriptorType::eStorageBuffer, nullptr, &InBufferInfo},
+        {DescriptorSet, 1,0,1, vk::DescriptorType::eStorageBuffer, nullptr, &OutBufferInfo}
+    };
+    Device.updateDescriptorSets(WriteDescriptorSets, {});
+
+
+    // Submit work to the cpu 
+
+    vk::CommandPoolCreateInfo CommandPoolCreateInfo(
+            vk::CommandPoolCreateFlags(),
+            ComputeQueueFamilyIndex
+    );
+    vk::CommandPool CommandPool = Device.createCommandPool(CommandPoolCreateInfo);
+
+    vk::CommandBufferAllocateInfo CommandBufferAllocInfo(
+            CommandPool, 
+            vk::CommandBufferLevel::ePrimary,
+            1
+    );
+    auto CmdBuffers = Device.allocateCommandBuffers(CommandBufferAllocInfo);
+    vk::CommandBuffer CmdBuffer = CmdBuffers.front();
+
 
 
 }
