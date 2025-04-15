@@ -37,9 +37,9 @@ struct PushConsts {
 
 // This function takes a full string ("haystack") and a substring ("needle"),
 // then uses a Vulkan compute shader to search for the first occurrence of needle.
-int vulkanStringSearch(const std::string &haystack, const std::string &needle) {
+std::vector<int> vulkanStringSearch(const std::string &text, const std::string &pattern) {
 
-    // PROFILE_SCOPE("VkSearch"); // Assuming a macro for performance profiling
+    PROFILE_SCOPE("VkSearch"); // Assuming a macro for performance profiling
 
     ////////////////////////////////////////////////////////////////////////
     //                          VULKAN INSTANCE                           //
@@ -142,10 +142,6 @@ int vulkanStringSearch(const std::string &haystack, const std::string &needle) {
     ////////////////////////////////////////////////////////////////////////
     //                         ALLOCATING MEMORY                          //
     ////////////////////////////////////////////////////////////////////////
-    // Define our search text and pattern.
-    std::string text = "Vulkan is a low-overhead, cross-platform API for high-performance graphics and computation. "
-                       "This is a naive substring search example in Vulkan. The word 'Vulkan' appears multiple times. Vulkan!";
-    std::string pattern = "Vulkan";
 
     // We'll allow up to 100 occurrences.
     const uint32_t maxOccurrences = 100;
@@ -403,6 +399,7 @@ int vulkanStringSearch(const std::string &haystack, const std::string &needle) {
     ////////////////////////////////////////////////////////////////////////
     //                        READ BACK THE RESULTS                       //
     ////////////////////////////////////////////////////////////////////////
+    std::vector<int> resultsVec = {};
     {
         int32_t* resultsPtr = static_cast<int32_t*>(device.mapMemory(resultsMemory, 0, resultsBufferSize));
         // The first element holds the number of matches found.
@@ -412,9 +409,14 @@ int vulkanStringSearch(const std::string &haystack, const std::string &needle) {
         std::cout << "Matches (" << count << " occurrences):" << std::endl;
         for (uint32_t i = 0; i < count && i < (maxOccurrences - 1); i++) {
             std::cout << resultsPtr[1 + i] << " ";
+            resultsVec.push_back(resultsPtr[1+i]);
         }
         std::cout << std::endl;
         device.unmapMemory(resultsMemory);
+    }
+
+    if (resultsVec.size() == 0) {
+        resultsVec.push_back(-1);
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -436,6 +438,8 @@ int vulkanStringSearch(const std::string &haystack, const std::string &needle) {
     device.destroyBuffer(resultsBuffer);
     device.destroy();
     instance.destroy();
+
+    return resultsVec; 
 }
 
 void vulkanSquare() {

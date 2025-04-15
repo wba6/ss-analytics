@@ -11,7 +11,6 @@
 
 int main() {
 
-    /*
     std::vector<std::function<int(std::string&, std::string&)>> benchMarkedSingleReturn {
         stringSearch,
         standardFind
@@ -19,7 +18,8 @@ int main() {
 
     std::vector<std::function<std::vector<int>(std::string&,std::string&)>> benchMarkedMultiReturn { 
         clSearch,
-        standardFindAll
+        standardFindAll,
+        vulkanStringSearch
     };
 
     std::vector<unsigned int> benchMarkFileSizes {
@@ -38,7 +38,6 @@ int main() {
     std::string filePrefix = "../results/testOutput";
     std::string testDataName = "testData.txt";
     benchMarker.runBenchmark(filePrefix, testDataName);
-    */
 
     vulkanSquare();
     vulkanStringSearch("", "");

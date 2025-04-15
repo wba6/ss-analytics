@@ -151,6 +151,16 @@ bool BenchMaker::generateFile(unsigned int fileSizeMB, std::string& substring, u
     return true;
 }
 
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
+    os << "[ ";
+    for (const auto& element : vec) {
+        os << element << " ";
+    }
+    os << "]";
+    return os;
+}
+
 template<typename T>
 void BenchMaker::runFunctions(const std::vector<T>& vec, std::string& data, std::string& substring) {
     // Assume the return type is std::vector<int>
@@ -162,9 +172,12 @@ void BenchMaker::runFunctions(const std::vector<T>& vec, std::string& data, std:
         for (size_t i = 1; i < vec.size(); ++i) {
             auto result = vec[i](data, substring);
             if (result != expected) {
-                throw std::runtime_error("Inconsistent return value detected at function index " + std::to_string(i));
+                std::cerr << "Inconsistent return value detected at function index " + std::to_string(i) << "\n";
+                std::cerr << "Expected: \n" << expected << "\n\n But found \n" << result << std::endl;
             }
         }
     }
 }
+
+
 

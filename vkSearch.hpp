@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 
-int vulkanStringSearch(const std::string &haystack, const std::string &needle);
+std::vector<int> vulkanStringSearch(const std::string &haystack, const std::string &needle);
 void vulkanSquare(); 
