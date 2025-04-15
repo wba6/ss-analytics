@@ -26,6 +26,8 @@ public:
                 std::vector<std::function<std::vector<int>(std::string&, std::string&)>>& multiReturn,
                 std::vector<unsigned int> testSizes);
 
+    ~BenchMaker();
+
     /**
     * @brief Runs the benchmark tests.
     *

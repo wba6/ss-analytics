@@ -24,15 +24,18 @@ int main() {
 
     std::vector<unsigned int> benchMarkFileSizes {
         10,
+        50,
         100,
         500,
+        800,
         1000,
+        1200,
         1500
     };
 
     BenchMaker benchMarker(benchMarkedSingleReturn, benchMarkedMultiReturn, benchMarkFileSizes);
 
-    std::string filePrefix = "../testOutput";
+    std::string filePrefix = "../results/testOutput";
     std::string testDataName = "testData.txt";
     benchMarker.runBenchmark(filePrefix, testDataName);
     */

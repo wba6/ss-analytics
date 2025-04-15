@@ -12,23 +12,23 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <cstdio>
 #include <iostream>
 #include "performance-analyzer/performance-analyzer.hpp"
 
-/**
- * @brief Constructs a BenchMaker instance.
- *
- * Initializes the BenchMaker with vectors of function objects for single and multiple integer returns,
- * a vector of test file sizes (in MB), and sets the default test data file name.
- *
- * @param singleReturn Vector of functions that return an integer given two strings.
- * @param multiReturn Vector of functions that return a vector of integers given two strings.
- * @param testSizes Vector of test file sizes (in megabytes) to be used during benchmarking.
- */
 BenchMaker::BenchMaker(std::vector<std::function<int(std::string&, std::string&)>>& singleReturn,
                 std::vector<std::function<std::vector<int>(std::string&, std::string&)>>& multiReturn,
                 std::vector<unsigned int> testSizes)
 :m_singleReturnVec(singleReturn), m_multiReturnVec(multiReturn), m_testSizes(testSizes), m_testDataFileName("testData.txt"){};
+
+BenchMaker::~BenchMaker() {
+    std::remove(m_testDataFileName.c_str()); // delete file
+ 
+    if (!std::ifstream{m_testDataFileName}) // uses operator! of temporary stream object
+    {
+        std::cerr << "Error opening deleted file" << std::endl;
+    }
+}
 
 /**
  * @brief Runs the benchmark tests.
