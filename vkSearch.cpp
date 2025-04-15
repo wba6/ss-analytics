@@ -27,18 +27,16 @@ int vulkanStringSearch(const std::string &haystack, const std::string &needle) {
 }
 
 void vulkanSquare() {
-
-    const uint32_t NumElements = 10;
-    const uint32_t BufferSize = NumElements * sizeof(int32_t);
-
-   //Fill application info
-    vk::ApplicationInfo AppInfo{
-        "vulkanCompute",    // Application name
-        1,                  // Application Version
-        nullptr,            // Engine name or nullptr
-        0,                  // Engine Version
-        VK_API_VERSION_1_1  // Vulkan API Version
-    };
+////////////////////////////////////////////////////////////////////////
+//                          VULKAN INSTANCE                           //
+////////////////////////////////////////////////////////////////////////
+	vk::ApplicationInfo AppInfo{
+		"VulkanCompute",      // Application Name
+		1,                    // Application Version
+		nullptr,              // Engine Name or nullptr
+		0,                    // Engine Version
+		VK_API_VERSION_1_1    // Vulkan API version
+	};
 
     // Define validation layers (only)
     const std::vector<const char*> Layers = { 
@@ -47,243 +45,285 @@ void vulkanSquare() {
 
     // Define instance extensions (include the portability extension here)
     const std::vector<const char*> Extensions = {
-        "VK_KHR_portability_enumeration"
+        "VK_KHR_portability_enumeration",
+        // Add other necessary extensions here (e.g., surface extensions) if needed.
     };
 
-    // Enable validation layer
+    // Create instance with flags, layers, and extensions
     vk::InstanceCreateInfo InstanceCreateInfo (
-            vk::InstanceCreateFlags(vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR),    // Flags
-            &AppInfo,                   // Application info
-            Layers.size(),              // Layers Count
-            Layers.data(),               // Layers
-            Extensions.size(),
-            Extensions.data()
+        vk::InstanceCreateFlags(vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR), // Flags
+        &AppInfo,                            // Application info
+        Layers.size(),                       // Layers count
+        Layers.data(),                       // Layers
+        Extensions.size(),                   // Extensions count
+        Extensions.data()                    // Extensions
     );
+
     vk::Instance Instance = vk::createInstance(InstanceCreateInfo);
 
-    // Determine physical device
-    vk::PhysicalDevice PhysicalDevice = Instance.enumeratePhysicalDevices().front();
-    vk::PhysicalDeviceProperties DeviceProps = PhysicalDevice.getProperties();
-    std::cout << "Vulkan device name: " << DeviceProps.deviceName << std::endl;
-    const uint32_t ApiVersion = DeviceProps.apiVersion;
-    std::cout << "Using API version: " << VK_VERSION_MAJOR(ApiVersion)
-            << "." << VK_VERSION_MINOR(ApiVersion) << "." << VK_VERSION_PATCH(ApiVersion);
 
-    // Queue Family 
-    auto QueueFamilyProps = PhysicalDevice.getQueueFamilyProperties();
-    auto PropIt = std::find_if(
-            QueueFamilyProps.begin(), QueueFamilyProps.end(),
-            [](const vk::QueueFamilyProperties& Prop){
-                return Prop.queueFlags & vk::QueueFlagBits::eCompute;
-            });
-    const uint32_t ComputeQueueFamilyIndex = std::distance(QueueFamilyProps.begin(), PropIt);
-    std::cout << "Compute Queue Family Index: " << ComputeQueueFamilyIndex << std::endl;
+////////////////////////////////////////////////////////////////////////
+//                          PHYSICAL DEVICE                           //
+////////////////////////////////////////////////////////////////////////
+	vk::PhysicalDevice PhysicalDevice = Instance.enumeratePhysicalDevices().front();
+	vk::PhysicalDeviceProperties DeviceProps = PhysicalDevice.getProperties();
+	std::cout << "Device Name    : " << DeviceProps.deviceName << std::endl;
+	const uint32_t ApiVersion = DeviceProps.apiVersion;
+	std::cout << "Vulkan Version : " << VK_VERSION_MAJOR(ApiVersion) << "." << VK_VERSION_MINOR(ApiVersion) << "." << VK_VERSION_PATCH(ApiVersion) << std::endl;
+	// vk::PhysicalDeviceLimits DeviceLimits = DeviceProps.limits;
+	// std::cout << "Max Compute Shared Memory Size: " << DeviceLimits.maxComputeSharedMemorySize / 1024 << " KB" << std::endl;
 
-    // Create device
-    vk::DeviceQueueCreateInfo DeviceQueueCreateInfo(
-            vk::DeviceQueueCreateFlags(),   // Flags
-            ComputeQueueFamilyIndex,        // Queue family index
-            1                               // Number of Queues
-     );
+
+////////////////////////////////////////////////////////////////////////
+//                            QUEUE FAMILY                            //
+////////////////////////////////////////////////////////////////////////
+	std::vector<vk::QueueFamilyProperties> QueueFamilyProps = PhysicalDevice.getQueueFamilyProperties();
+	auto PropIt = std::find_if(QueueFamilyProps.begin(), QueueFamilyProps.end(), [](const vk::QueueFamilyProperties& Prop) {
+		return Prop.queueFlags & vk::QueueFlagBits::eCompute;
+	});
+	const uint32_t ComputeQueueFamilyIndex = std::distance(QueueFamilyProps.begin(), PropIt);
+	std::cout << "Compute Queue Family Index: " << ComputeQueueFamilyIndex << std::endl;
+
+
+////////////////////////////////////////////////////////////////////////
+//                               DEVICE                               //
+////////////////////////////////////////////////////////////////////////
+	float queuePriorities = 1.0f;
+	vk::DeviceQueueCreateInfo DeviceQueueCreateInfo(
+			vk::DeviceQueueCreateFlags(),   // Flags
+			ComputeQueueFamilyIndex,        // Queue Family Index
+			1,                              // Number of Queues
+			&queuePriorities
+			);
+
+    // Device creation extensions
+    const std::vector<const char*> deviceExtensions = {
+        "VK_KHR_portability_subset"
+        // Add other device extensions if needed.
+    };
+
     vk::DeviceCreateInfo DeviceCreateInfo(
-            vk::DeviceCreateFlags(),
-            DeviceQueueCreateInfo
+        vk::DeviceCreateFlags(),
+        1,
+        &DeviceQueueCreateInfo,
+        0,
+        nullptr, // or a valid features pointer if needed
+        deviceExtensions.size(),
+        deviceExtensions.data()
     );
     vk::Device Device = PhysicalDevice.createDevice(DeviceCreateInfo);
 
+////////////////////////////////////////////////////////////////////////
+//                         Allocating Memory                          //
+////////////////////////////////////////////////////////////////////////
+	// Create the required buffers for the application
+    // Allocate the memory to back the buffers
+    // Bind the buffers to the memory
+	
+	// Create buffers
+	const uint32_t NumElements = 10;
+	const uint32_t BufferSize = NumElements * sizeof(int32_t);
 
-    // Buffer Creation
-    vk::BufferCreateInfo BufferCreateInfo{
-        vk::BufferCreateFlags(),
-        NumElements * sizeof(int32_t),      // size
-        vk::BufferUsageFlagBits::eStorageBuffer, // Usage
-        vk::SharingMode::eExclusive,            // SharingMode
-        1,                                  // Numver of queue family indices
-        &ComputeQueueFamilyIndex            // List of queue family indices
-    };
-    vk::Buffer InBuffer = Device.createBuffer(BufferCreateInfo);
-    vk::Buffer OutBuffer = Device.createBuffer(BufferCreateInfo);
+	vk::BufferCreateInfo BufferCreateInfo{
+		vk::BufferCreateFlags(),                    // Flags
+		BufferSize,                                 // Size
+		vk::BufferUsageFlagBits::eStorageBuffer,    // Usage
+		vk::SharingMode::eExclusive,                // Sharing mode
+		1,                                          // Number of queue family indices
+		&ComputeQueueFamilyIndex                    // List of queue family indices
+	};
+	vk::Buffer InBuffer = Device.createBuffer(BufferCreateInfo);
+	vk::Buffer OutBuffer = Device.createBuffer(BufferCreateInfo);
 
-    // Queue Memory Types
-    vk::PhysicalDeviceMemoryProperties MemoryProperties = PhysicalDevice.getMemoryProperties();
-    uint32_t MemoryTypeIndex = -1;
-    for(uint32_t i = 0; i < MemoryProperties.memoryTypeCount; ++i) {
-        vk::MemoryType MemoryType = MemoryProperties.memoryTypes[i];
-        if ((vk::MemoryPropertyFlagBits::eHostVisible & MemoryType.propertyFlags) &&
-            (vk::MemoryPropertyFlagBits::eHostCoherent & MemoryType.propertyFlags)) {
-            MemoryTypeIndex = i;
-            break;
-        }
-    }
+	// Memory req
+	vk::MemoryRequirements InBufferMemoryRequirements = Device.getBufferMemoryRequirements(InBuffer);
+	vk::MemoryRequirements OutBufferMemoryRequirements = Device.getBufferMemoryRequirements(OutBuffer);
 
-    // Memory requirements
-    vk::MemoryRequirements InBufferMemoryRequirements = Device.getBufferMemoryRequirements(InBuffer);
-    vk::MemoryRequirements OutBufferMemoryRequirements = Device.getBufferMemoryRequirements(OutBuffer);
+	// query
+	vk::PhysicalDeviceMemoryProperties MemoryProperties = PhysicalDevice.getMemoryProperties();
 
-    // Allocate memory
-    vk::MemoryAllocateInfo InBufferMemoryAllocateInfo(InBufferMemoryRequirements.size, MemoryTypeIndex);
-    vk::MemoryAllocateInfo OutBufferMemoryAllocateInfo(OutBufferMemoryRequirements.size, MemoryTypeIndex);
-    vk::DeviceMemory InBufferMemory = Device.allocateMemory(InBufferMemoryAllocateInfo);
-    vk::DeviceMemory OutBufferMemory = Device.allocateMemory(OutBufferMemoryAllocateInfo);
+	uint32_t MemoryTypeIndex = uint32_t(~0);
+	vk::DeviceSize MemoryHeapSize = uint32_t(~0);
+	for (uint32_t CurrentMemoryTypeIndex = 0; CurrentMemoryTypeIndex < MemoryProperties.memoryTypeCount; ++CurrentMemoryTypeIndex)
+	{
+		vk::MemoryType MemoryType = MemoryProperties.memoryTypes[CurrentMemoryTypeIndex];
+		if ((vk::MemoryPropertyFlagBits::eHostVisible & MemoryType.propertyFlags) &&
+			(vk::MemoryPropertyFlagBits::eHostCoherent & MemoryType.propertyFlags))
+		{
+			MemoryHeapSize = MemoryProperties.memoryHeaps[MemoryType.heapIndex].size;
+			MemoryTypeIndex = CurrentMemoryTypeIndex;
+			break;
+		}
+	}
 
-    // Map Memory and write
-    int32_t* InBufferPtr = 
-        static_cast<int32_t*>(Device.mapMemory(InBufferMemory, 0, BufferSize));
-    for (int32_t i = 0; i < NumElements; ++i) {
-        InBufferPtr[i] = i;
-    }
-    Device.unmapMemory(InBufferMemory);
+	std::cout << "Memory Type Index: " << MemoryTypeIndex << std::endl;
+	std::cout << "Memory Heap Size : " << MemoryHeapSize / 1024 / 1024 / 1024 << " GB" << std::endl;
 
-    // Bind Buffers to Memory
-    Device.bindBufferMemory(InBuffer, InBufferMemory, 0);
-    Device.bindBufferMemory(OutBuffer, OutBufferMemory, 0);
+	// Allocate memory
+	vk::MemoryAllocateInfo InBufferMemoryAllocateInfo(InBufferMemoryRequirements.size, MemoryTypeIndex);
+	vk::MemoryAllocateInfo OutBufferMemoryAllocateInfo(OutBufferMemoryRequirements.size, MemoryTypeIndex);
+	vk::DeviceMemory InBufferMemory = Device.allocateMemory(InBufferMemoryAllocateInfo);
+	vk::DeviceMemory OutBufferMemory = Device.allocateMemory(InBufferMemoryAllocateInfo);
 
-    // Create pipline for compute shader 14:56
+	// Map memory and write
+	int32_t* InBufferPtr = static_cast<int32_t*>(Device.mapMemory(InBufferMemory, 0, BufferSize));
+	for (uint32_t I = 0; I < NumElements; ++I) {
+		InBufferPtr[I] = I;
+	}
+	Device.unmapMemory(InBufferMemory);
+
+	// Bind buffers to memory
+	Device.bindBufferMemory(InBuffer, InBufferMemory, 0);
+	Device.bindBufferMemory(OutBuffer, OutBufferMemory, 0);
+
+////////////////////////////////////////////////////////////////////////
+//                              PIPELINE                              //
+////////////////////////////////////////////////////////////////////////
 
     //ShaderContents contains the data in .spv shader file
-    std::string ShaderContents = R"(
-            #version 430
-            layout(local_size_x = 1, local_size_y = 1) in;
+	std::vector<char> ShaderContents;
+	if (std::ifstream ShaderFile{ "../shader.comp.spv", std::ios::binary | std::ios::ate }) {
+		const size_t FileSize = ShaderFile.tellg();
+		ShaderFile.seekg(0);
+		ShaderContents.resize(FileSize, '\0');
+		ShaderFile.read(ShaderContents.data(), FileSize);
+	}
 
-            layout(std430, binding = 0) buffer lay0 {int inbuf[]; };
-            layout(std430, binding = 1) buffer lay1 {int outbuf[]; };
-
-            void main() {
-                const uint id = gl_GlobalInvocationID.x;
-
-                outbuf[id] = inbuf[id] * inbuf[id];
-            }
-        )";
-
-    const size_t ShaderContentsSize = ShaderContents.size();
-    const uint32_t* ShaderContentsData = (const uint32_t*) ShaderContents.data();
-    vk::ShaderModuleCreateInfo ShaderModuleCreateInfo(
-            vk::ShaderModuleCreateFlags(),      //Flags
-            ShaderContentsSize,                 // code size
-            ShaderContentsData                  // code
-    );
+  	vk::ShaderModuleCreateInfo ShaderModuleCreateInfo(
+		vk::ShaderModuleCreateFlags(),                                // Flags
+		ShaderContents.size(),                                        // Code size
+		reinterpret_cast<const uint32_t*>(ShaderContents.data()));    // Code
     vk::ShaderModule ShaderModule = Device.createShaderModule(ShaderModuleCreateInfo);
 
-    // Descriptor set layout
-    const std::vector<vk::DescriptorSetLayoutBinding> DescriptorSetLayoutBinding = {
-        {0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},
-        {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute}
-    };
-    vk::DescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo (
-            vk::DescriptorSetLayoutCreateFlags(),
-            DescriptorSetLayoutBinding
-    );
-    vk::DescriptorSetLayout DescriptorSetLayout = Device.createDescriptorSetLayout(DescriptorSetLayoutCreateInfo);
+	// Descriptor Set Layout
+	// The layout of data to be passed to pipelin
+	const std::vector<vk::DescriptorSetLayoutBinding> DescriptorSetLayoutBinding = {
+		{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},
+		{1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute}
+	};
+	vk::DescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo(
+		vk::DescriptorSetLayoutCreateFlags(),
+		DescriptorSetLayoutBinding);
+	vk::DescriptorSetLayout DescriptorSetLayout = Device.createDescriptorSetLayout(DescriptorSetLayoutCreateInfo);
 
+	// Pipeline Layout
+	vk::PipelineLayoutCreateInfo PipelineLayoutCreateInfo(vk::PipelineLayoutCreateFlags(), DescriptorSetLayout);
+	vk::PipelineLayout PipelineLayout = Device.createPipelineLayout(PipelineLayoutCreateInfo);
+	vk::PipelineCache PipelineCache = Device.createPipelineCache(vk::PipelineCacheCreateInfo());
 
-    // pipline Layout 
-    vk::PipelineLayoutCreateInfo PipelineLayoutCreateInfo (
-            vk::PipelineLayoutCreateFlags(),
-            DescriptorSetLayout
-    );
-    vk::PipelineLayout PipelineLayout = Device.createPipelineLayout(PipelineLayoutCreateInfo);
-    vk::PipelineCache PipelineCache = Device.createPipelineCache(vk::PipelineCacheCreateInfo());
+	// Compute Pipeline
+	vk::PipelineShaderStageCreateInfo PipelineShaderCreateInfo(
+		vk::PipelineShaderStageCreateFlags(),  // Flags
+		vk::ShaderStageFlagBits::eCompute,     // Stage
+		ShaderModule,                          // Shader Module
+		"main"                                 // Shader Entry Point
+		);
+	vk::ComputePipelineCreateInfo ComputePipelineCreateInfo(
+		vk::PipelineCreateFlags(),    // Flags
+		PipelineShaderCreateInfo,     // Shader Create Info struct
+		PipelineLayout                // Pipeline Layout
+		);
+	vk::Pipeline ComputePipeline = Device.createComputePipeline(PipelineCache, ComputePipelineCreateInfo).value;
 
-    // Pipeline
-    vk::PipelineShaderStageCreateInfo PipelineShaderCreateInfo(
-            vk::PipelineShaderStageCreateFlags(),       // Flags
-            vk::ShaderStageFlagBits::eCompute,          // stage 
-            ShaderModule,                               // Shader module 
-            "main"                                      // Shader entry point
-    );
-    vk::ComputePipelineCreateInfo ComputePipelineCreateInfo(
-            vk::PipelineCreateFlags(),      // flags 
-            PipelineShaderCreateInfo,       // shader create info struct
-            PipelineLayout                  // pipeline layout
-    );
-    vk::Pipeline ComputePipeline = Device.createComputePipeline(PipelineCache, ComputePipelineCreateInfo).value;
+////////////////////////////////////////////////////////////////////////
+//                          DESCRIPTOR SETS                           //
+////////////////////////////////////////////////////////////////////////
+	// Descriptor sets must be allocated in a vk::DescriptorPool, so we need to create one first
+	vk::DescriptorPoolSize DescriptorPoolSize(vk::DescriptorType::eStorageBuffer, 2);
+	vk::DescriptorPoolCreateInfo DescriptorPoolCreateInfo(vk::DescriptorPoolCreateFlags(), 1, DescriptorPoolSize);
+	vk::DescriptorPool DescriptorPool = Device.createDescriptorPool(DescriptorPoolCreateInfo);
 
-    // Descriptor pool
-    vk::DescriptorPoolSize DescriptorPoolSize(
-            vk::DescriptorType::eStorageBuffer,
-            2
-    );
-    vk::DescriptorPoolCreateInfo DescriptorPoolCreateInfo(
-            vk::DescriptorPoolCreateFlags(),
-            1,
-            DescriptorPoolSize
-    );
-    vk::DescriptorPool DescriptorPool = Device.createDescriptorPool(DescriptorPoolCreateInfo);
+	// Allocate descriptor sets, update them to use buffers:
+	vk::DescriptorSetAllocateInfo DescriptorSetAllocInfo(DescriptorPool, 1, &DescriptorSetLayout);
+	const std::vector<vk::DescriptorSet> DescriptorSets = Device.allocateDescriptorSets(DescriptorSetAllocInfo);
+	vk::DescriptorSet DescriptorSet = DescriptorSets.front();
+	vk::DescriptorBufferInfo InBufferInfo(InBuffer, 0, NumElements * sizeof(int32_t));
+	vk::DescriptorBufferInfo OutBufferInfo(OutBuffer, 0, NumElements * sizeof(int32_t));
 
-    // Descriptor sets 
-    vk::DescriptorSetAllocateInfo allocInfo(DescriptorPool, 1, &DescriptorSetLayout);
-    auto DescriptorSets = Device.allocateDescriptorSets(allocInfo);
-    vk::DescriptorSet DescriptorSet = DescriptorSets.front();
-    vk::DescriptorBufferInfo InBufferInfo(InBuffer, 0, NumElements * sizeof(int32_t));
-    vk::DescriptorBufferInfo OutBufferInfo(OutBuffer, 0, NumElements * sizeof(int32_t));
+	const std::vector<vk::WriteDescriptorSet> WriteDescriptorSets = {
+		{DescriptorSet, 0, 0, 1, vk::DescriptorType::eStorageBuffer, nullptr, &InBufferInfo},
+		{DescriptorSet, 1, 0, 1, vk::DescriptorType::eStorageBuffer, nullptr, &OutBufferInfo},
+	};
+	Device.updateDescriptorSets(WriteDescriptorSets, {});
 
-    // update descriptor sets to use out Buffers
-    const std::vector<vk::WriteDescriptorSet> WriteDescriptorSets = {
-        {DescriptorSet, 0,0,1, vk::DescriptorType::eStorageBuffer, nullptr, &InBufferInfo},
-        {DescriptorSet, 1,0,1, vk::DescriptorType::eStorageBuffer, nullptr, &OutBufferInfo}
-    };
-    Device.updateDescriptorSets(WriteDescriptorSets, {});
+////////////////////////////////////////////////////////////////////////
+//                         SUBMIT WORK TO GPU                         //
+////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////
+	// Command Pool
+	vk::CommandPoolCreateInfo CommandPoolCreateInfo(vk::CommandPoolCreateFlags(), ComputeQueueFamilyIndex);
+	vk::CommandPool CommandPool = Device.createCommandPool(CommandPoolCreateInfo);
+	// Allocate Command buffer from Pool
+	vk::CommandBufferAllocateInfo CommandBufferAllocInfo(
+    CommandPool,                         // Command Pool
+    vk::CommandBufferLevel::ePrimary,    // Level
+    1);                                  // Num Command Buffers
+	const std::vector<vk::CommandBuffer> CmdBuffers = Device.allocateCommandBuffers(CommandBufferAllocInfo);
+	vk::CommandBuffer CmdBuffer = CmdBuffers.front();
 
+	// Record commands
+	vk::CommandBufferBeginInfo CmdBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	CmdBuffer.begin(CmdBufferBeginInfo);
+	CmdBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, ComputePipeline);
+	CmdBuffer.bindDescriptorSets(
+			vk::PipelineBindPoint::eCompute,    // Bind point
+			PipelineLayout,                  // Pipeline Layout
+			0,                               // First descriptor set
+			{ DescriptorSet },               // List of descriptor sets
+			{});                             // Dynamic offsets
+	CmdBuffer.dispatch(NumElements, 1, 1);
+	CmdBuffer.end();
 
-    // Submit work to the cpu 
+	// Fence and submit
+	vk::Queue Queue = Device.getQueue(ComputeQueueFamilyIndex, 0);
+	vk::Fence Fence = Device.createFence(vk::FenceCreateInfo());
+	vk::SubmitInfo SubmitInfo(
+			0,                // Num Wait Semaphores
+			nullptr,        // Wait Semaphores
+			nullptr,        // Pipeline Stage Flags
+			1,              // Num Command Buffers
+			&CmdBuffer);    // List of command buffers
+	Queue.submit({ SubmitInfo }, Fence);
+	(void) Device.waitForFences(
+			{ Fence },             // List of fences
+			true,               // Wait All
+			uint64_t(-1));      // Timeout
 
-    vk::CommandPoolCreateInfo CommandPoolCreateInfo(
-            vk::CommandPoolCreateFlags(),
-            ComputeQueueFamilyIndex
-    );
-    vk::CommandPool CommandPool = Device.createCommandPool(CommandPoolCreateInfo);
+	// Map output buffer and read results
+	InBufferPtr = static_cast<int32_t*>(Device.mapMemory(InBufferMemory, 0, BufferSize));
+	std::cout << std::endl;
+	std::cout << "INPUT:  ";
+	for (uint32_t I = 0; I < NumElements; ++I) {
+		std::cout << InBufferPtr[I] << " ";
+	}
+	std::cout << std::endl;
+	Device.unmapMemory(InBufferMemory);
 
-    vk::CommandBufferAllocateInfo CommandBufferAllocInfo(
-            CommandPool, 
-            vk::CommandBufferLevel::ePrimary,
-            1
-    );
-    auto CmdBuffers = Device.allocateCommandBuffers(CommandBufferAllocInfo);
-    vk::CommandBuffer CmdBuffer = CmdBuffers.front();
-
-    // Record commands 17:26
-    vk::CommandBufferBeginInfo CmdBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    CmdBuffer.begin(CmdBufferBeginInfo);
-    CmdBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, ComputePipeline);
-    CmdBuffer.bindDescriptorSets(
-            vk::PipelineBindPoint::eCompute,
-            PipelineLayout,
-            0,
-            { DescriptorSet },
-            {}
-    );
-    CmdBuffer.dispatch(NumElements, 1, 1);
-    CmdBuffer.end();
-
-    // Submit work and wait
-    vk::Queue Queue = Device.getQueue(ComputeQueueFamilyIndex, 0);
-    vk::Fence Fence = Device.createFence(vk::FenceCreateInfo());
-
-    vk::SubmitInfo SubmitInfo(
-            0,
-            nullptr,
-            nullptr,
-            1,
-            &CmdBuffer
-    );
-    Queue.submit({ SubmitInfo }, Fence);
-    Device.waitForFences(
-            {Fence},
-            true,
-            uint64_t(-1)
-    );
-
-    // Read output
-    int32_t* OutBufferPtr = static_cast<int32_t*>(Device.mapMemory(OutBufferMemory, 0, BufferSize));
-    for(uint32_t i = 0; i < NumElements; ++i) {
-        std::cout << OutBufferPtr[i] << " ";
-    }
-    std::cout << std::endl;
-    Device.unmapMemory(OutBufferMemory);
-
-    Device.freeMemory(OutBufferMemory);
-    Device.destroyBuffer(OutBuffer);
-    Device.destroy();
+	int32_t* OutBufferPtr = static_cast<int32_t*>(Device.mapMemory(OutBufferMemory, 0, BufferSize));
+	std::cout << "OUTPUT: ";
+	for (uint32_t I = 0; I < NumElements; ++I) {
+		std::cout << OutBufferPtr[I] << " ";
+	}
+	std::cout << std::endl;
+	Device.unmapMemory(OutBufferMemory);
+////////////////////////////////////////////////////////////////////////
+//                              CLEANUP                               //
+////////////////////////////////////////////////////////////////////////
+	Device.resetCommandPool(CommandPool, vk::CommandPoolResetFlags());
+	Device.destroyFence(Fence);
+	Device.destroyDescriptorSetLayout(DescriptorSetLayout);
+	Device.destroyPipelineLayout(PipelineLayout);
+	Device.destroyPipelineCache(PipelineCache);
+	Device.destroyShaderModule(ShaderModule);
+	Device.destroyPipeline(ComputePipeline);
+	Device.destroyDescriptorPool(DescriptorPool);
+	Device.destroyCommandPool(CommandPool);
+	Device.freeMemory(InBufferMemory);
+	Device.freeMemory(OutBufferMemory);
+	Device.destroyBuffer(InBuffer);
+	Device.destroyBuffer(OutBuffer);
+	Device.destroy();
+	Instance.destroy();
 }
 
 
