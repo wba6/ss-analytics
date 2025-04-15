@@ -22,9 +22,12 @@ int main() {
 
     std::vector<unsigned int> benchMarkFileSizes {
         10,
+        50,
         100,
         500,
+        800,
         1000,
+        1200,
         1500
     };
 
