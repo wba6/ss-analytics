@@ -1,0 +1,57 @@
+#version 450
+#extension GL_EXT_shader_8bit_storage : require
+
+// Declare buffers using 8-bit storage
+layout(std430, set = 0, binding = 0) readonly buffer TextBuffer {
+    uint8_t text[];
+};
+
+layout(std430, set = 0, binding = 1) readonly buffer PatternBuffer {
+    uint8_t pattern[];
+};
+
+layout(std430, set = 0, binding = 2) buffer ResultsBuffer {
+    int occurrences[]; // occurrences[0] serves as the atomic counter.
+};
+
+const int MAX_OCCURRENCES = 100;
+
+// Push constant block for lengths
+layout(push_constant) uniform PushConsts {
+    uint textLength;    // In bytes
+    uint patternLength; // In bytes
+} pc;
+
+// A helper function to compare the pattern at a given offset in text.
+bool checkMatch(uint textIndex) {
+    // If there isn’t enough space left, exit early.
+    if (textIndex + pc.patternLength > pc.textLength) {
+        return false;
+    }
+    // For each byte in the pattern, compare with the text byte.
+    for (uint i = 0; i < pc.patternLength; i++) {
+        // Cast the 8-bit values to 32-bit unsigned ints before comparing.
+        if (uint(text[textIndex + i]) != uint(pattern[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void main() 
+{
+    // Each invocation handles one potential starting index.
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= pc.textLength) {
+        return;
+    }
+    
+    if (checkMatch(idx)) {
+        // Reserve a slot in the results buffer using an atomic add on occurrences[0]
+        int oldVal = atomicAdd(occurrences[0], 1);
+        if (oldVal < MAX_OCCURRENCES) {
+            occurrences[1 + oldVal] = int(idx);
+        }
+    }
+}
+

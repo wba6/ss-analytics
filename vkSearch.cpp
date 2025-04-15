@@ -17,13 +17,425 @@
     std::cerr << "Detected Vulkan error: " << err << std::endl; \
     throw std::runtime_error("Vulkan error"); } } while(0)
 
+// A helper function to load a .spv file off disk:
+std::vector<char> LoadShaderFile(const std::string& filename) {
+    std::vector<char> buffer;
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    if (file) {
+        const size_t fileSize = file.tellg();
+        file.seekg(0);
+        buffer.resize(fileSize);
+        file.read(buffer.data(), fileSize);
+    }
+    return buffer;
+}
+
+struct PushConsts {
+    uint32_t textLength;
+    uint32_t patternLength;
+};
 
 // This function takes a full string ("haystack") and a substring ("needle"),
 // then uses a Vulkan compute shader to search for the first occurrence of needle.
 int vulkanStringSearch(const std::string &haystack, const std::string &needle) {
-    PROFILE_SCOPE("VkSearch");
-    int foundIndex = -1;
-    return foundIndex;
+
+    // PROFILE_SCOPE("VkSearch"); // Assuming a macro for performance profiling
+
+    ////////////////////////////////////////////////////////////////////////
+    //                          VULKAN INSTANCE                           //
+    ////////////////////////////////////////////////////////////////////////
+    vk::ApplicationInfo appInfo{
+        "VulkanSubstringSearch", // Application Name
+        1,                       // Application Version
+        nullptr,                 // Engine Name or nullptr
+        0,                       // Engine Version
+        VK_API_VERSION_1_1       // Vulkan API Version
+    };
+
+    const std::vector<const char*> layers = {
+        "VK_LAYER_KHRONOS_validation"
+    };
+
+    const std::vector<const char*> extensions = {
+        "VK_KHR_portability_enumeration"
+    };
+
+    vk::InstanceCreateInfo instanceCreateInfo(
+        vk::InstanceCreateFlags(vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR),
+        &appInfo,
+        static_cast<uint32_t>(layers.size()),
+        layers.data(),
+        static_cast<uint32_t>(extensions.size()),
+        extensions.data()
+    );
+    vk::Instance instance = vk::createInstance(instanceCreateInfo);
+
+    ////////////////////////////////////////////////////////////////////////
+    //                          PHYSICAL DEVICE                           //
+    ////////////////////////////////////////////////////////////////////////
+    auto physicalDevices = instance.enumeratePhysicalDevices();
+    if (physicalDevices.empty())
+        throw std::runtime_error("No Vulkan-capable device found!");
+    vk::PhysicalDevice physicalDevice = physicalDevices.front();
+
+    vk::PhysicalDeviceProperties deviceProps = physicalDevice.getProperties();
+    std::cout << "Using device: " << deviceProps.deviceName << std::endl;
+    const uint32_t apiVersion = deviceProps.apiVersion;
+    std::cout << "Vulkan API version: " 
+              << VK_VERSION_MAJOR(apiVersion) << "." 
+              << VK_VERSION_MINOR(apiVersion) << "." 
+              << VK_VERSION_PATCH(apiVersion) << std::endl;
+
+    ////////////////////////////////////////////////////////////////////////
+    //                            QUEUE FAMILY                            //
+    ////////////////////////////////////////////////////////////////////////
+    std::vector<vk::QueueFamilyProperties> queueFamilyProps = physicalDevice.getQueueFamilyProperties();
+    auto it = std::find_if(queueFamilyProps.begin(), queueFamilyProps.end(),
+        [](const vk::QueueFamilyProperties& qfp) {
+            return qfp.queueFlags & vk::QueueFlagBits::eCompute;
+        }
+    );
+    if (it == queueFamilyProps.end())
+        throw std::runtime_error("No compute queue family found!");
+    uint32_t computeQueueFamilyIndex = static_cast<uint32_t>(std::distance(queueFamilyProps.begin(), it));
+    std::cout << "Compute Queue Family Index: " << computeQueueFamilyIndex << std::endl;
+
+    ////////////////////////////////////////////////////////////////////////
+    //                               DEVICE                               //
+    ////////////////////////////////////////////////////////////////////////
+    
+    float queuePriorities = 1.0f;
+       const std::vector<const char*> deviceExtensions = {
+        "VK_KHR_portability_subset",
+        "VK_KHR_8bit_storage"
+    };
+    // Create the device queue create info as before.
+    vk::DeviceQueueCreateInfo deviceQueueCreateInfo(
+        vk::DeviceQueueCreateFlags(),
+        computeQueueFamilyIndex,
+        1,
+        &queuePriorities
+    );
+
+    // Set up the 8-bit storage features.
+    vk::PhysicalDevice8BitStorageFeatures eightBitStorageFeatures{};
+    eightBitStorageFeatures.sType = vk::StructureType::ePhysicalDevice8BitStorageFeatures;
+    eightBitStorageFeatures.pNext = nullptr;
+    eightBitStorageFeatures.uniformAndStorageBuffer8BitAccess = VK_TRUE;  // Enable the feature.
+
+    // Now create the device. Chain the eightBitStorageFeatures in the pNext field.
+    vk::DeviceCreateInfo deviceCreateInfo(
+        vk::DeviceCreateFlags(),
+        1,
+        &deviceQueueCreateInfo,
+        0,
+        nullptr,
+        static_cast<uint32_t>(deviceExtensions.size()),
+        deviceExtensions.data()
+    );
+
+    // Chain in the 8-bit storage features.
+    deviceCreateInfo.pNext = &eightBitStorageFeatures;
+
+    // Create the device.
+    vk::Device device = physicalDevice.createDevice(deviceCreateInfo);
+    ////////////////////////////////////////////////////////////////////////
+    //                         ALLOCATING MEMORY                          //
+    ////////////////////////////////////////////////////////////////////////
+    // Define our search text and pattern.
+    std::string text = "Vulkan is a low-overhead, cross-platform API for high-performance graphics and computation. "
+                       "This is a naive substring search example in Vulkan. The word 'Vulkan' appears multiple times. Vulkan!";
+    std::string pattern = "Vulkan";
+
+    // We'll allow up to 100 occurrences.
+    const uint32_t maxOccurrences = 100;
+
+    // Create text buffer.
+    vk::DeviceSize textBufferSize = text.size();
+    vk::BufferCreateInfo textBufferCreateInfo(
+        vk::BufferCreateFlags(),
+        textBufferSize,
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        vk::SharingMode::eExclusive,
+        1,
+        &computeQueueFamilyIndex
+    );
+    vk::Buffer textBuffer = device.createBuffer(textBufferCreateInfo);
+
+    // Create pattern buffer.
+    vk::DeviceSize patternBufferSize = pattern.size();
+    vk::BufferCreateInfo patternBufferCreateInfo(
+        vk::BufferCreateFlags(),
+        patternBufferSize,
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        vk::SharingMode::eExclusive,
+        1,
+        &computeQueueFamilyIndex
+    );
+    vk::Buffer patternBuffer = device.createBuffer(patternBufferCreateInfo);
+
+    // Create results buffer.
+    vk::DeviceSize resultsBufferSize = maxOccurrences * sizeof(int32_t);
+    vk::BufferCreateInfo resultsBufferCreateInfo(
+        vk::BufferCreateFlags(),
+        resultsBufferSize,
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        vk::SharingMode::eExclusive,
+        1,
+        &computeQueueFamilyIndex
+    );
+    vk::Buffer resultsBuffer = device.createBuffer(resultsBufferCreateInfo);
+
+    // Get memory requirements for each buffer.
+    vk::MemoryRequirements textMemReq = device.getBufferMemoryRequirements(textBuffer);
+    vk::MemoryRequirements patternMemReq = device.getBufferMemoryRequirements(patternBuffer);
+    vk::MemoryRequirements resultsMemReq = device.getBufferMemoryRequirements(resultsBuffer);
+
+    // Determine a suitable memory type.
+    vk::PhysicalDeviceMemoryProperties memProps = physicalDevice.getMemoryProperties();
+    uint32_t memoryTypeIndex = uint32_t(~0);
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
+        const vk::MemoryType& memType = memProps.memoryTypes[i];
+        if ((memType.propertyFlags & vk::MemoryPropertyFlagBits::eHostVisible) &&
+            (memType.propertyFlags & vk::MemoryPropertyFlagBits::eHostCoherent)) 
+        {
+            memoryTypeIndex = i;
+            break;
+        }
+    }
+    if (memoryTypeIndex == uint32_t(~0))
+        throw std::runtime_error("Failed to find suitable memory type!");
+
+    // Allocate and bind memory for text buffer.
+    vk::MemoryAllocateInfo textMemAlloc(textMemReq.size, memoryTypeIndex);
+    vk::DeviceMemory textMemory = device.allocateMemory(textMemAlloc);
+    device.bindBufferMemory(textBuffer, textMemory, 0);
+
+    // Allocate and bind memory for pattern buffer.
+    vk::MemoryAllocateInfo patternMemAlloc(patternMemReq.size, memoryTypeIndex);
+    vk::DeviceMemory patternMemory = device.allocateMemory(patternMemAlloc);
+    device.bindBufferMemory(patternBuffer, patternMemory, 0);
+
+    // Allocate and bind memory for results buffer.
+    vk::MemoryAllocateInfo resultsMemAlloc(resultsMemReq.size, memoryTypeIndex);
+    vk::DeviceMemory resultsMemory = device.allocateMemory(resultsMemAlloc);
+    device.bindBufferMemory(resultsBuffer, resultsMemory, 0);
+
+    // Copy text into the text buffer.
+    {
+        void* textPtr = device.mapMemory(textMemory, 0, textBufferSize);
+        memcpy(textPtr, text.data(), text.size());
+        device.unmapMemory(textMemory);
+    }
+
+    // Copy pattern into the pattern buffer.
+    {
+        void* patternPtr = device.mapMemory(patternMemory, 0, patternBufferSize);
+        memcpy(patternPtr, pattern.data(), pattern.size());
+        device.unmapMemory(patternMemory);
+    }
+
+    // Initialize the results buffer:
+    // * Set results[0] to 0 (atomic counter).
+    // * Set all remaining indices to -1.
+    {
+        int32_t* resultsPtr = static_cast<int32_t*>(device.mapMemory(resultsMemory, 0, resultsBufferSize));
+        resultsPtr[0] = 0;
+        for (uint32_t i = 1; i < maxOccurrences; i++) {
+            resultsPtr[i] = -1;
+        }
+        device.unmapMemory(resultsMemory);
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    //                              PIPELINE                              //
+    ////////////////////////////////////////////////////////////////////////
+    // Load the compute shader (compiled to SPIR-V).
+    std::vector<char> shaderContents = LoadShaderFile("../substringSearch.spv");
+    if (shaderContents.empty())
+        throw std::runtime_error("Failed to load substringSearch.spv");
+
+    vk::ShaderModuleCreateInfo shaderModuleCreateInfo(
+        vk::ShaderModuleCreateFlags(),
+        shaderContents.size(),
+        reinterpret_cast<const uint32_t*>(shaderContents.data())
+    );
+    vk::ShaderModule shaderModule = device.createShaderModule(shaderModuleCreateInfo);
+
+    // Create descriptor set layout.
+    // Binding 0: Text buffer (read-only)
+    // Binding 1: Pattern buffer (read-only)
+    // Binding 2: Results buffer (read/write)
+    std::vector<vk::DescriptorSetLayoutBinding> layoutBindings = {
+        { 0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute },
+        { 1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute },
+        { 2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute }
+    };
+    vk::DescriptorSetLayoutCreateInfo descLayoutCreateInfo(
+        vk::DescriptorSetLayoutCreateFlags(),
+        static_cast<uint32_t>(layoutBindings.size()),
+        layoutBindings.data()
+    );
+    vk::DescriptorSetLayout descriptorSetLayout = device.createDescriptorSetLayout(descLayoutCreateInfo);
+
+    // Create a push constant range for the compute stage.
+    vk::PushConstantRange pushConstantRange = {};
+    pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eCompute;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(PushConsts);
+
+    // Create pipeline layout (descriptor set layout + push constant range).
+    vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
+    pipelineLayoutCreateInfo.setLayoutCount = 1;
+    pipelineLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
+    vk::PipelineLayout pipelineLayout = device.createPipelineLayout(pipelineLayoutCreateInfo);
+
+    // Create a pipeline cache (optional).
+    vk::PipelineCache pipelineCache = device.createPipelineCache(vk::PipelineCacheCreateInfo());
+
+    // Create compute pipeline.
+    vk::PipelineShaderStageCreateInfo pipelineShaderStageCreateInfo(
+        vk::PipelineShaderStageCreateFlags(),
+        vk::ShaderStageFlagBits::eCompute,
+        shaderModule,
+        "main"
+    );
+    vk::ComputePipelineCreateInfo computePipelineCreateInfo(
+        vk::PipelineCreateFlags(),
+        pipelineShaderStageCreateInfo,
+        pipelineLayout
+    );
+    vk::Pipeline computePipeline = device.createComputePipeline(pipelineCache, computePipelineCreateInfo).value;
+
+    ////////////////////////////////////////////////////////////////////////
+    //                          DESCRIPTOR SETS                           //
+    ////////////////////////////////////////////////////////////////////////
+    // Create a descriptor pool.
+    vk::DescriptorPoolSize poolSize(vk::DescriptorType::eStorageBuffer, 3);
+    vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo(
+        vk::DescriptorPoolCreateFlags(),
+        1,         // Maximum number of sets
+        1,         // Pool count for the given type
+        &poolSize
+    );
+    vk::DescriptorPool descriptorPool = device.createDescriptorPool(descriptorPoolCreateInfo);
+
+    // Allocate one descriptor set.
+    vk::DescriptorSetAllocateInfo descriptorSetAllocInfo(
+        descriptorPool,
+        1,
+        &descriptorSetLayout
+    );
+    std::vector<vk::DescriptorSet> descriptorSets = device.allocateDescriptorSets(descriptorSetAllocInfo);
+    vk::DescriptorSet descriptorSet = descriptorSets.front();
+
+    // Define descriptor buffer infos.
+    vk::DescriptorBufferInfo textBufferInfo(textBuffer, 0, textBufferSize);
+    vk::DescriptorBufferInfo patternBufferInfo(patternBuffer, 0, patternBufferSize);
+    vk::DescriptorBufferInfo resultsBufferInfo(resultsBuffer, 0, resultsBufferSize);
+
+    // Update the descriptor set.
+    std::vector<vk::WriteDescriptorSet> writeSets = {
+        { descriptorSet, 0, 0, 1, vk::DescriptorType::eStorageBuffer, nullptr, &textBufferInfo },
+        { descriptorSet, 1, 0, 1, vk::DescriptorType::eStorageBuffer, nullptr, &patternBufferInfo },
+        { descriptorSet, 2, 0, 1, vk::DescriptorType::eStorageBuffer, nullptr, &resultsBufferInfo }
+    };
+    device.updateDescriptorSets(writeSets, {});
+
+    ////////////////////////////////////////////////////////////////////////
+    //                         SUBMIT WORK TO GPU                         //
+    ////////////////////////////////////////////////////////////////////////
+    // Create a command pool.
+    vk::CommandPoolCreateInfo commandPoolCreateInfo(vk::CommandPoolCreateFlags(), computeQueueFamilyIndex);
+    vk::CommandPool commandPool = device.createCommandPool(commandPoolCreateInfo);
+
+    // Allocate a command buffer.
+    vk::CommandBufferAllocateInfo commandBufferAllocInfo(
+        commandPool,
+        vk::CommandBufferLevel::ePrimary,
+        1
+    );
+    std::vector<vk::CommandBuffer> commandBuffers = device.allocateCommandBuffers(commandBufferAllocInfo);
+    vk::CommandBuffer cmdBuffer = commandBuffers.front();
+
+    // Record commands.
+    vk::CommandBufferBeginInfo beginInfoCmd(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    cmdBuffer.begin(beginInfoCmd);
+
+    // Bind pipeline and descriptor sets.
+    cmdBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, computePipeline);
+    cmdBuffer.bindDescriptorSets(
+        vk::PipelineBindPoint::eCompute,
+        pipelineLayout,
+        0,
+        { descriptorSet },
+        {}
+    );
+
+    // Prepare push constants.
+    PushConsts pushData{};
+    pushData.textLength = static_cast<uint32_t>(text.size());
+    pushData.patternLength = static_cast<uint32_t>(pattern.size());
+    cmdBuffer.pushConstants<PushConsts>(
+        pipelineLayout,
+        vk::ShaderStageFlagBits::eCompute,
+        0,
+        pushData
+    );
+
+    // Dispatch: one thread per character (naive approach).
+    uint32_t dispatchSize = static_cast<uint32_t>(text.size());
+    cmdBuffer.dispatch(dispatchSize, 1, 1);
+    cmdBuffer.end();
+
+    // Submit command buffer.
+    vk::Queue queue = device.getQueue(computeQueueFamilyIndex, 0);
+    vk::Fence fence = device.createFence(vk::FenceCreateInfo());
+    vk::SubmitInfo submitInfo(
+        0, nullptr, nullptr,
+        1, &cmdBuffer
+    );
+    queue.submit({ submitInfo }, fence);
+    device.waitForFences({ fence }, true, uint64_t(-1));
+
+    ////////////////////////////////////////////////////////////////////////
+    //                        READ BACK THE RESULTS                       //
+    ////////////////////////////////////////////////////////////////////////
+    {
+        int32_t* resultsPtr = static_cast<int32_t*>(device.mapMemory(resultsMemory, 0, resultsBufferSize));
+        // The first element holds the number of matches found.
+        uint32_t count = resultsPtr[0];
+        std::cout << "Text size: " << text.size() << std::endl;
+        std::cout << "Pattern: \"" << pattern << "\"" << std::endl;
+        std::cout << "Matches (" << count << " occurrences):" << std::endl;
+        for (uint32_t i = 0; i < count && i < (maxOccurrences - 1); i++) {
+            std::cout << resultsPtr[1 + i] << " ";
+        }
+        std::cout << std::endl;
+        device.unmapMemory(resultsMemory);
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    //                              CLEANUP                               //
+    ////////////////////////////////////////////////////////////////////////
+    device.destroyFence(fence);
+    device.destroyPipeline(computePipeline);
+    device.destroyShaderModule(shaderModule);
+    device.destroyPipelineCache(pipelineCache);
+    device.destroyDescriptorPool(descriptorPool);
+    device.destroyDescriptorSetLayout(descriptorSetLayout);
+    device.destroyPipelineLayout(pipelineLayout);
+    device.destroyCommandPool(commandPool);
+    device.freeMemory(textMemory);
+    device.freeMemory(patternMemory);
+    device.freeMemory(resultsMemory);
+    device.destroyBuffer(textBuffer);
+    device.destroyBuffer(patternBuffer);
+    device.destroyBuffer(resultsBuffer);
+    device.destroy();
+    instance.destroy();
 }
 
 void vulkanSquare() {

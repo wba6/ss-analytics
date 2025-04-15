@@ -38,6 +38,7 @@ int main() {
     */
 
     vulkanSquare();
+    vulkanStringSearch("", "");
 
     return 0;
 }
