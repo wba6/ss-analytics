@@ -33,7 +33,7 @@ int main() {
 
     BenchMaker benchMarker(benchMarkedSingleReturn, benchMarkedMultiReturn, benchMarkFileSizes);
 
-    std::string filePrefix = "../testOutput";
+    std::string filePrefix = "../results/testOutput";
     std::string testDataName = "testData.txt";
     benchMarker.runBenchmark(filePrefix, testDataName);
 
