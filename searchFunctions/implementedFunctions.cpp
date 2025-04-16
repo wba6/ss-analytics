@@ -1,6 +1,6 @@
 #include <string>
 #include "performance-analyzer/performance-analyzer.hpp"
-#include "implimentedFunctions.hpp"
+#include "implementedFunctions.hpp"
 
 /*
  * string search function that returns the index of the first occurrence of the substring in the string

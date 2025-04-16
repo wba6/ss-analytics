@@ -2,10 +2,10 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include "cl.hpp"
-#include "standardFunctions.hpp"
-#include "implimentedFunctions.hpp"
 #include "benchMarker.hpp"
+#include "searchFunctions/cl.hpp"
+#include "searchFunctions/standardFunctions.hpp"
+#include "searchFunctions/implementedFunctions.hpp"
 #include "performance-analyzer/performance-analyzer.hpp"
 
 int main() {
@@ -31,7 +31,7 @@ int main() {
         1500
     };
 
-    BenchMaker benchMarker(benchMarkedSingleReturn, benchMarkedMultiReturn, benchMarkFileSizes);
+    BenchMarker benchMarker(benchMarkedSingleReturn, benchMarkedMultiReturn, benchMarkFileSizes);
 
     std::string filePrefix = "../results/testOutput";
     std::string testDataName = "testData.txt";
