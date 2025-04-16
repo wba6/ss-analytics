@@ -16,7 +16,7 @@ add_executable(ss_analytics
     searchFunctions/implementedFunctions.cpp
     searchFunctions/standardFunctions.cpp
     benchMarker.cpp
-    vkSearch.cpp
+    searchFunctions/vkSearch.cpp
 )
 
 if (MSVC)
