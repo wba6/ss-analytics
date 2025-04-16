@@ -16,17 +16,17 @@
 #include <iostream>
 #include "performance-analyzer/performance-analyzer.hpp"
 
-BenchMaker::BenchMaker(std::vector<std::function<int(std::string&, std::string&)>>& singleReturn,
+BenchMarker::BenchMarker(std::vector<std::function<int(std::string&, std::string&)>>& singleReturn,
                 std::vector<std::function<std::vector<int>(std::string&, std::string&)>>& multiReturn,
                 std::vector<unsigned int> testSizes)
 :m_singleReturnVec(singleReturn), m_multiReturnVec(multiReturn), m_testSizes(testSizes), m_testDataFileName("testData.txt"){};
 
-BenchMaker::~BenchMaker() {
+BenchMarker::~BenchMarker() {
     std::remove(m_testDataFileName.c_str()); // delete file
  
-    if (!std::ifstream{m_testDataFileName}) // uses operator! of temporary stream object
+    if (std::ifstream{m_testDataFileName}) // uses operator! of temporary stream object
     {
-        std::cerr << "Error opening deleted file" << std::endl;
+        std::cerr << "Error deleted file test file" << std::endl;
     }
 }
 
@@ -42,7 +42,7 @@ BenchMaker::~BenchMaker() {
  * @param testDataFileName Name of the file used for test data generation and reading.
  * @return true if the benchmark completes successfully.
  */
-bool BenchMaker::runBenchmark(std::string& outputFilePrefix, std::string& testDataFileName) {
+bool BenchMarker::runBenchmark(std::string& outputFilePrefix, std::string& testDataFileName) {
     m_testDataFileName = testDataFileName;    
 
     std::string substring = "akdl;jfksjft";
@@ -55,7 +55,7 @@ bool BenchMaker::runBenchmark(std::string& outputFilePrefix, std::string& testDa
         std::string outputFileName = outputFilePrefix + "_" + std::to_string(size);
         outputFileName += "MB.json";
 
-        Profiler::Get().BeginSession("BenchMaker", outputFileName);
+        Profiler::Get().BeginSession("BenchMarker", outputFileName);
 
         runFunctions(m_singleReturnVec, data, substring);
         runFunctions(m_multiReturnVec, data, substring);
@@ -78,7 +78,7 @@ bool BenchMaker::runBenchmark(std::string& outputFilePrefix, std::string& testDa
  * @param fileName Name of the file to read.
  * @return A std::string containing the contents of the file.
  */
-std::string BenchMaker::loadStringFromFile(std::string& fileName) {
+std::string BenchMarker::loadStringFromFile(std::string& fileName) {
     std::ifstream t(fileName);
     std::stringstream buffer;
     buffer << t.rdbuf();
@@ -101,7 +101,7 @@ std::string BenchMaker::loadStringFromFile(std::string& fileName) {
  * @throws std::invalid_argument if the substring is empty or if the file size is insufficient to contain the specified number of substring occurrences.
  * @throws std::runtime_error if the file cannot be opened for writing.
  */
-bool BenchMaker::generateFile(unsigned int fileSizeMB, std::string& substring, unsigned int occurrences) {
+bool BenchMarker::generateFile(unsigned int fileSizeMB, std::string& substring, unsigned int occurrences) {
     // Convert file size from MB to bytes
     unsigned int fileSize = fileSizeMB * 1024 * 1024;
 
@@ -162,7 +162,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
 }
 
 template<typename T>
-void BenchMaker::runFunctions(const std::vector<T>& vec, std::string& data, std::string& substring) {
+void BenchMarker::runFunctions(const std::vector<T>& vec, std::string& data, std::string& substring) {
     // Assume the return type is std::vector<int>
     if (!vec.empty()) {
         // Call the first function and store its return value.

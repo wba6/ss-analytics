@@ -10,8 +10,14 @@ add_compile_definitions(PROFILING_ENABLED)
 
 add_subdirectory(./vendor/performance-analyzer)
 
-add_executable(ss_analytics main.cpp cl.cpp implimentedFunctions.cpp standardFunctions.cpp vkSearch.cpp benchMarker.cpp)
-
+add_executable(ss_analytics 
+    main.cpp
+    searchFunctions/cl.cpp
+    searchFunctions/implementedFunctions.cpp
+    searchFunctions/standardFunctions.cpp
+    benchMarker.cpp
+    vkSearch.cpp
+)
 
 if (MSVC)
         target_compile_options(ss_analytics PRIVATE
