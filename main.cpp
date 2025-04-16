@@ -4,8 +4,7 @@
 #include <vector>
 #include "searchFunctions/cl.hpp"
 #include "searchFunctions/standardFunctions.hpp"
-#include "searchFunctions/implimentedFunctions.hpp"
-#include "benchMarker.hpp"
+#include "searchFunctions/implementedFunctions.hpp"
 #include "performance-analyzer/performance-analyzer.hpp"
 
 int main() {
