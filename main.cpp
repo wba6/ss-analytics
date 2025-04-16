@@ -40,7 +40,7 @@ int main() {
     benchMarker.runBenchmark(filePrefix, testDataName);
 
     vulkanSquare();
-    vulkanStringSearch("", "");
+    vulkanStringSearch("find the vulkan in vulkan", "vulkan");
 
     return 0;
 }
