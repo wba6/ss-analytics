@@ -10,10 +10,10 @@
 #include <functional>
 #include <vector>
 
-class BenchMaker {
+class BenchMarker {
 public:
     /**
-    * @brief Constructs a BenchMaker instance.
+    * @brief Constructs a BenchMarker instance.
     *
     * Initializes the BenchMaker with vectors of function objects for single and multiple integer returns,
     * a vector of test file sizes (in MB), and sets the default test data file name.
@@ -22,11 +22,11 @@ public:
     * @param multiReturn Vector of functions that return a vector of integers given two strings.
     * @param testSizes Vector of test file sizes (in megabytes) to be used during benchmarking.
     */
-    BenchMaker(std::vector<std::function<int(std::string&, std::string&)>>& singleReturn,
+    BenchMarker(std::vector<std::function<int(std::string&, std::string&)>>& singleReturn,
                 std::vector<std::function<std::vector<int>(std::string&, std::string&)>>& multiReturn,
                 std::vector<unsigned int> testSizes);
 
-    ~BenchMaker();
+    ~BenchMarker();
 
     /**
     * @brief Runs the benchmark tests.

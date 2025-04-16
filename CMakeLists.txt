@@ -13,7 +13,7 @@ add_subdirectory(./vendor/performance-analyzer)
 add_executable(ss_analytics 
     main.cpp
     searchFunctions/cl.cpp
-    searchFunctions/implimentedFunctions.cpp
+    searchFunctions/implementedFunctions.cpp
     searchFunctions/standardFunctions.cpp
     benchMarker.cpp
 )

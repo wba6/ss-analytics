@@ -2,6 +2,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include "benchMarker.hpp"
 #include "searchFunctions/cl.hpp"
 #include "searchFunctions/standardFunctions.hpp"
 #include "searchFunctions/implementedFunctions.hpp"
@@ -30,7 +31,7 @@ int main() {
         1500
     };
 
-    BenchMaker benchMarker(benchMarkedSingleReturn, benchMarkedMultiReturn, benchMarkFileSizes);
+    BenchMarker benchMarker(benchMarkedSingleReturn, benchMarkedMultiReturn, benchMarkFileSizes);
 
     std::string filePrefix = "../results/testOutput";
     std::string testDataName = "testData.txt";
