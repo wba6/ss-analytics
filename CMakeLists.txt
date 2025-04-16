@@ -41,3 +41,12 @@ target_include_directories( ss_analytics PUBLIC
     ${PROJECT_SOURCE_DIR}/vendor/CL/include
     ${Vulkan_INCLUDE_DIR}
 )
+
+add_custom_target(run
+    DEPENDS ss_analytics
+    COMMAND $<TARGET_FILE:ss_analytics> 
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running bench mark"
+    VERBATIM
+)
+

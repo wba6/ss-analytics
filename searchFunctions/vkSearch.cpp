@@ -12,6 +12,7 @@
 #include "vulkan/vulkan_handles.hpp"
 #include "vulkan/vulkan_structs.hpp"
 #include "vkSearch.hpp"
+
 // Helper macro for error checking.
 #define VK_CHECK(x) do { VkResult err = x; if (err) { \
     std::cerr << "Detected Vulkan error: " << err << std::endl; \
