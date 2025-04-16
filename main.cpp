@@ -2,9 +2,9 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include "cl.hpp"
-#include "standardFunctions.hpp"
-#include "implimentedFunctions.hpp"
+#include "searchFunctions/cl.hpp"
+#include "searchFunctions/standardFunctions.hpp"
+#include "searchFunctions/implimentedFunctions.hpp"
 #include "benchMarker.hpp"
 #include "performance-analyzer/performance-analyzer.hpp"
 
