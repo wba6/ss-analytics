@@ -13,11 +13,6 @@
 #include "vulkan/vulkan_structs.hpp"
 #include "vkSearch.hpp"
 
-// Helper macro for error checking.
-#define VK_CHECK(x) do { VkResult err = x; if (err) { \
-    std::cerr << "Detected Vulkan error: " << err << std::endl; \
-    throw std::runtime_error("Vulkan error"); } } while(0)
-
 // A helper function to load a .spv file off disk:
 std::vector<char> LoadShaderFile(const std::string& filename) {
     std::vector<char> buffer;
@@ -45,6 +40,7 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
     ////////////////////////////////////////////////////////////////////////
     //                          VULKAN INSTANCE                           //
     ////////////////////////////////////////////////////////////////////////
+    Timer instanceTimer("Instance Timer");
     vk::ApplicationInfo appInfo{
         "VulkanSubstringSearch", // Application Name
         1,                       // Application Version
@@ -140,9 +136,12 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
 
     // Create the device.
     vk::Device device = physicalDevice.createDevice(deviceCreateInfo);
+    instanceTimer.stop();
+
     ////////////////////////////////////////////////////////////////////////
     //                         ALLOCATING MEMORY                          //
     ////////////////////////////////////////////////////////////////////////
+    Timer allocTimer("Allocation timer");
 
     // We'll allow up to 100 occurrences.
     const uint32_t maxOccurrences = 100;
@@ -244,9 +243,14 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
         device.unmapMemory(resultsMemory);
     }
 
+    allocTimer.stop();
+
     ////////////////////////////////////////////////////////////////////////
     //                              PIPELINE                              //
     ////////////////////////////////////////////////////////////////////////
+
+    Timer pipleineTimer("Pipline");
+
     // Load the compute shader (compiled to SPIR-V).
     std::vector<char> shaderContents = LoadShaderFile("../substringSearch.spv");
     if (shaderContents.empty())
@@ -341,9 +345,13 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
     };
     device.updateDescriptorSets(writeSets, {});
 
+    pipleineTimer.stop();
+
     ////////////////////////////////////////////////////////////////////////
     //                         SUBMIT WORK TO GPU                         //
     ////////////////////////////////////////////////////////////////////////
+
+    Timer submitGPUTimer("Submit GPU work");
     // Create a command pool.
     vk::CommandPoolCreateInfo commandPoolCreateInfo(vk::CommandPoolCreateFlags(), computeQueueFamilyIndex);
     vk::CommandPool commandPool = device.createCommandPool(commandPoolCreateInfo);
@@ -397,9 +405,13 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
     queue.submit({ submitInfo }, fence);
     device.waitForFences({ fence }, true, uint64_t(-1));
 
+    submitGPUTimer.stop();
+
     ////////////////////////////////////////////////////////////////////////
     //                        READ BACK THE RESULTS                       //
     ////////////////////////////////////////////////////////////////////////
+
+    Timer readResultsTimer("Read results timer");
     std::vector<int> resultsVec = {};
     {
         int32_t* resultsPtr = static_cast<int32_t*>(device.mapMemory(resultsMemory, 0, resultsBufferSize));
@@ -420,6 +432,7 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
         resultsVec.push_back(-1);
     }
 
+    readResultsTimer.stop();
     ////////////////////////////////////////////////////////////////////////
     //                              CLEANUP                               //
     ////////////////////////////////////////////////////////////////////////
