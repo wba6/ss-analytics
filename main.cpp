@@ -19,7 +19,8 @@ int main() {
     std::vector<std::function<std::vector<int>(std::string&,std::string&)>> benchMarkedMultiReturn { 
         clSearch,
         standardFindAll,
-        vulkanStringSearch
+        vulkanStringSearch,
+        vkCompStringSearch
     };
 
     std::vector<unsigned int> benchMarkFileSizes {

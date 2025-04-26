@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cassert>
 #include <iostream>
+#include "kompute/Kompute.hpp"
 #include "performance-analyzer/performance-analyzer.hpp"
 #include "vulkan/vulkan_core.h"
 #include "vulkan/vulkan_enums.hpp"
@@ -30,6 +31,68 @@ struct PushConsts {
     uint32_t textLength;
     uint32_t patternLength;
 };
+
+std::vector<int> vkCompStringSearch(const std::string &str, const std::string &substr) {
+    PROFILE_FUNCTION();
+    kp::Manager mgr;
+
+    // 1) Prepare data as uint32/int32 tensors
+    std::vector<uint32_t> textData(str.begin(),     str.end());
+    std::vector<uint32_t> patternData(substr.begin(), substr.end());
+    std::vector<int32_t>  matchesInit(100, -1);
+    std::vector<int32_t>  countInit(1, 0);
+
+    auto tText    = mgr.tensorT<uint32_t>(textData);
+    auto tPattern = mgr.tensorT<uint32_t>(patternData);
+    auto tMatches = mgr.tensorT<int32_t>(matchesInit);
+    auto tCount   = mgr.tensorT<int32_t>(countInit);
+
+    // 2) Load SPIR-V
+    std::vector<uint32_t> spirv;
+    {
+        std::ifstream file("../kCompute.spv", std::ios::binary | std::ios::ate);
+        auto size = file.tellg();
+        spirv.resize(size / 4);
+        file.seekg(0);
+        file.read(reinterpret_cast<char*>(spirv.data()), size);
+    }
+
+    // 3) Compute dispatch parameters
+    uint32_t strLen    = uint32_t(str.size());
+    uint32_t subLen    = uint32_t(substr.size());
+    uint32_t groupCount = (strLen + 63u) / 64u;
+
+    // 4) Pass spec-consts as int32, use templated overload (S=int32_t)
+    std::vector<int32_t> specConsts = { int32_t(strLen), int32_t(subLen) };
+    auto algo = mgr.algorithm<int32_t, float>(
+      { tText, tPattern, tMatches, tCount },
+      spirv,
+      kp::Workgroup({ groupCount, 1, 1 }),
+      specConsts,   // now true int32 spec constants
+      {}            // no push-constants
+    );
+
+    // 5) Record & run
+    auto seq = mgr.sequence();
+    seq->record<kp::OpSyncDevice>   ({ tText, tPattern, tMatches, tCount });
+    seq->record<kp::OpAlgoDispatch> (algo);
+    seq->record<kp::OpSyncLocal>    ({ tMatches, tCount });
+    seq->eval();
+
+    // 6) Gather results
+    int    hostCount   = tCount->vector()[0];
+    size_t numMatches  = std::min<size_t>(matchesInit.size(), size_t(hostCount));
+    auto   hostMatches = tMatches->vector();
+
+    std::vector<int> results;
+    results.reserve(numMatches);
+    for (size_t i = 0; i < numMatches; ++i) {
+        results.push_back(hostMatches[i]);
+    }
+    return results;
+}
+
+
 
 // This function takes a full string ("haystack") and a substring ("needle"),
 // then uses a Vulkan compute shader to search for the first occurrence of needle.

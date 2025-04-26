@@ -1,0 +1,28 @@
+#version 450
+
+// These two lines declare immutable ints baked into the SPIR-V pipeline.
+// IDs 0 and 1 correspond to specConstants[0] and specConstants[1] in C++.
+layout(constant_id = 0) const int STR_LEN = 0;
+layout(constant_id = 1) const int SUB_LEN = 0;
+
+layout(local_size_x = 64) in;
+
+layout(std430, binding = 0) buffer TextBuffer   { uint text[];     };
+layout(std430, binding = 1) buffer PatternBuf   { uint pattern[];  };
+layout(std430, binding = 2) buffer MatchesBuf   { int matches[];   };
+layout(std430, binding = 3) buffer CountBuf     { int count[];     };
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i > uint(STR_LEN - SUB_LEN)) return;
+
+    for (int j = 0; j < SUB_LEN; ++j) {
+        if (text[i + j] != pattern[j]) return;
+    }
+
+    int slot = atomicAdd(count[0], 1);
+    if (slot < 100) {
+        matches[slot] = int(i);
+    }
+}
+
