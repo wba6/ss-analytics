@@ -40,9 +40,6 @@ int main() {
     std::string testDataName = "testData.txt";
     benchMarker.runBenchmark(filePrefix, testDataName);
 
-    vulkanSquare();
-    vulkanStringSearch("find the vulkan in vulkan", "vulkan");
-
     return 0;
 }
 

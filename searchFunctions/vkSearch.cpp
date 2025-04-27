@@ -113,7 +113,7 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
     };
 
     const std::vector<const char*> layers = {
-        "VK_LAYER_KHRONOS_validation"
+        //"VK_LAYER_KHRONOS_validation"
     };
 
     const std::vector<const char*> extensions = {
@@ -480,11 +480,7 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
         int32_t* resultsPtr = static_cast<int32_t*>(device.mapMemory(resultsMemory, 0, resultsBufferSize));
         // The first element holds the number of matches found.
         uint32_t count = resultsPtr[0];
-        std::cout << "Text size: " << text.size() << std::endl;
-        std::cout << "Pattern: \"" << pattern << "\"" << std::endl;
-        std::cout << "Matches (" << count << " occurrences):" << std::endl;
         for (uint32_t i = 0; i < count && i < (maxOccurrences - 1); i++) {
-            std::cout << resultsPtr[1 + i] << " ";
             resultsVec.push_back(resultsPtr[1+i]);
         }
         std::cout << std::endl;
