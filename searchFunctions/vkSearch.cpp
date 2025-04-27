@@ -117,11 +117,10 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
     };
 
     const std::vector<const char*> extensions = {
-        "VK_KHR_portability_enumeration"
     };
 
     vk::InstanceCreateInfo instanceCreateInfo(
-        vk::InstanceCreateFlags(vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR),
+        vk::InstanceCreateFlags(),
         &appInfo,
         static_cast<uint32_t>(layers.size()),
         layers.data(),
@@ -136,7 +135,7 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
     auto physicalDevices = instance.enumeratePhysicalDevices();
     if (physicalDevices.empty())
         throw std::runtime_error("No Vulkan-capable device found!");
-    vk::PhysicalDevice physicalDevice = physicalDevices.front();
+    vk::PhysicalDevice physicalDevice = physicalDevices.at(1);
 
     vk::PhysicalDeviceProperties deviceProps = physicalDevice.getProperties();
     std::cout << "Using device: " << deviceProps.deviceName << std::endl;
@@ -166,7 +165,6 @@ std::vector<int> vulkanStringSearch(const std::string &text, const std::string &
     
     float queuePriorities = 1.0f;
        const std::vector<const char*> deviceExtensions = {
-        "VK_KHR_portability_subset",
         "VK_KHR_8bit_storage"
     };
     // Create the device queue create info as before.
