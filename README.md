@@ -5,6 +5,7 @@ A head‑to‑head performance study of exact string searching on CPU vs. GPU us
 - A CPU baseline implementation using C++23’s `std::string::find`
 - An OpenCL 1.2 kernel (`searchAllLimited`) and host harness
 - A Vulkan SPIR‑V compute shader wrapped in [Kompute](https://github.com/KomputeProject/kompute)
+- See the Vulkan implementation on the [`9-vulkan-implementation` branch](https://github.com/wba6/ss-analytics/tree/9-vulkan-implementation).
 - A common benchmarking driver (`benchMarker.cpp`) that measures end‑to‑end latency and kernel execution times
 - Scripts and data processing tools for generating synthetic corpora and exporting JSON traces
 
