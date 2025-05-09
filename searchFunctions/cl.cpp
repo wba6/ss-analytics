@@ -17,9 +17,35 @@
 #include "CL/opencl.hpp"
 
 
-
+/**
+ * @brief Records and profiles the timing information for a given OpenCL event.
+ *
+ * Retrieves queued-to-submit and start-to-end timestamps from the event,
+ * converts them to milliseconds, and feeds them into the custom profiler.
+ *
+ * @param[in] event  The OpenCL event whose profiling timestamps will be queried.
+ *
+ * @throws cl::Error if any of the calls to getProfilingInfo() fail.
+ */
 void record_cl_time(cl::Event &event); 
-//This function can throw exceptions
+
+/**
+ * @brief Searches for all occurrences of a substring in a string using an OpenCL kernel.
+ *
+ * This function sets up an OpenCL context and queue, builds a simple substring-search
+ * kernel, dispatches it over each possible start position, and collects up to 100 match indices.
+ * Profiling scopes (via PROFILE_FUNCTION and PROFILE_SCOPE) and timers measure each stage.
+ *
+ * @param[in] str     The input text to search in.
+ * @param[in] substr  The pattern to search for.
+ *
+ * @return A vector of starting indices where `substr` was found in `str`. Contains at most
+ *         100 entries, in ascending order.
+ *
+ * @throws cl::Error if any OpenCL call fails (e.g., context creation, program build, buffer
+ *         operations, or kernel enqueue). Build failures will also print the build log
+ *         to stderr before rethrowing.
+ */
 std::vector<int> clSearch(const std::string& str, const std::string& substr) {
     PROFILE_FUNCTION();
     std::vector<int> hostResults(100, -1);
@@ -84,12 +110,12 @@ std::vector<int> clSearch(const std::string& str, const std::string& substr) {
     int patternLen = substr.length();
 
 
-    // Copy the text and pattern data to device
+    // provide the text and pattern data to device
     cl::Buffer d_text(
         context,
         CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, 
         sizeof(cl_char) * numTextElements,
-        (void*)str.data()  // textVector is your repacked array of cl_char16 elements
+        (void*)str.data() 
    );
 
 
@@ -169,6 +195,16 @@ std::vector<int> clSearch(const std::string& str, const std::string& substr) {
     return hostResults;
 }
 
+/**
+ * @brief Records and profiles the timing information for a given OpenCL event.
+ *
+ * Retrieves queued-to-submit and start-to-end timestamps from the event,
+ * converts them to milliseconds, and feeds them into the custom profiler.
+ *
+ * @param[in] event  The OpenCL event whose profiling timestamps will be queried.
+ *
+ * @throws cl::Error if any of the calls to getProfilingInfo() fail.
+ */
 void record_cl_time(cl::Event &event) {
     
     // returns the time passed in microseconds 
